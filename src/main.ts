@@ -6,6 +6,6 @@ type RawChannel = ReturnType<typeof import("socketcan")["createRawChannel"]>;
 async function bootstrap() {
 	const app = await NestFactory.create(AppModule);
 	app.enableShutdownHooks();
-	await app.listen(process.env.PORT ?? 32103);
+	await app.listen(process.env.PORT ?? 3200);
 }
 bootstrap();

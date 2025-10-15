@@ -1,6 +1,6 @@
 import { Body, Controller, Delete, Get, Param, Post } from "@nestjs/common";
 import { CanService } from "./can.service";
-import { TxFrameInput } from "./can.types";
+import { CanFrame } from "./can.types";
 
 @Controller("can")
 export class CanController {
@@ -8,15 +8,15 @@ export class CanController {
 
 	@Get()
 	list() {
-		return this.can.list();
+		return this.can.listInterfaces();
 	}
 
 	@Post(":iface/tx")
 	sendToIface(
 		@Param("iface") iface: string,
-		@Body() body: Omit<TxFrameInput, "iface">,
+		@Body() body: Omit<CanFrame, "iface">,
 	) {
-		this.can.sendFrame({ iface, ...body });
+		this.can.send(iface, body);
 		return { ok: true };
 	}
 }

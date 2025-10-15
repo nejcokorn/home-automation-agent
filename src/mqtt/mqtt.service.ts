@@ -19,7 +19,7 @@ export class MqttService implements OnModuleInit, OnModuleDestroy {
 				`can-bridge-${Math.random().toString(16).slice(2)}`,
 			username: process.env.MQTT_USERNAME || undefined,
 			password: process.env.MQTT_PASSWORD || undefined,
-			reconnectPeriod: 2000,
+			reconnectPeriod: 10000,
 			clean: false, // ohrani naročnine
 			will: {
 				topic: "can/bridge/lwt",

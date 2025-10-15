@@ -6,9 +6,9 @@ import { CanMqttBridge } from './can.mqtt-bridge';
 
 @Global()
 @Module({
-  imports: [MqttModule],
-  providers: [CanService, CanMqttBridge],
-  controllers: [CanController],
-  exports: [CanService],
+	imports: [MqttModule],
+	providers: [CanService, CanMqttBridge],
+	controllers: [CanController],
+	exports: [CanService],
 })
 export class CanModule {}

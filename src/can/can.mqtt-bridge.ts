@@ -11,11 +11,10 @@ export class CanMqttBridge implements OnModuleInit {
 	) {}
 
 	onModuleInit() {
-		// primer: can/<iface>/tx
 		this.mqtt.subscribe("can/+/tx", (topic, payload) => {
-			const [, iface] = topic.split("/"); // "can","<iface>","tx"
+			const [, iface] = topic.split("/");
 			try {
-				this.can.sendFrame({ iface, ...payload });
+				this.can.send(iface, payload);
 			} catch (e) {
 				this.logger.error(
 					`TX via MQTT failed (${topic}): ${(e as Error).message}`,
