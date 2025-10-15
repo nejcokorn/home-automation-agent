@@ -14,9 +14,10 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 
 	private canAddresses = {
 		broadcast: 0x7FF,
+		EEPROM: 0xF6,
+		config: 0xF5,
 		discover: 0xF4,
 		ping: 0xF3,
-		config: 0xF5,
 	}
 
 	constructor(
@@ -233,7 +234,39 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 		return deviceConfig;
 	}
 
-	public async writeEEPROM(iface: string) {
+	public async writeEEPROM(iface: string, deviceId: number) {
+		let unsubscribe: Unsubscribe = () => {};
+		
+		return await new ExtraPromise((resolve, reject) => {
+			let buf : Buffer = Buffer.alloc(8);
+			let commControl : number = CommControl.Command;
+			let dataCtrl : number = DataControl.Config | DataControl.WriteEEPROM;
+			buf[0] = this.canAddresses.EEPROM;
+			buf[1] = commControl;
+			buf[2] = dataCtrl;
+
+			unsubscribe = this.can.subscribe((frame: CanFrame) => {
+				let payload = this.parseFrame(frame);
+				if (payload.to == this.canAddresses.EEPROM
+					&& payload.commControl.isCommand == true
+					&& payload.commControl.isAcknowledge == true
+					&& payload.dataCtrl.isWriteEEPROM == true
+				) {
+					resolve(true);
+				}
+			});
+
+			console.log(buf);
+			
+			this.can.send(iface, {
+				id: deviceId,
+				data: buf
+			});
+		})
+		.timeout(10000) // Writing to EEPROM can take longer
+		.finally(() => {
+			unsubscribe();
+		});
 	}
 
 	private parseFrame(frame: CanFrame): DeviceFrame {
@@ -251,7 +284,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 		};
 		let dataCtrl = {
 			isConfig : frame.data[2] & DataControl.Config ? true : false,
-			isWriteEEPROM : frame.data[2] & DataControl.EEPROM ? true : false,
+			isWriteEEPROM : frame.data[2] & DataControl.WriteEEPROM ? true : false,
 			isWrite : frame.data[2] & DataControl.Write ? true : false,
 			isInput : frame.data[2] & DataControl.Input ? true : false,
 			dataType : (frame.data[2] & DataControl.DataType) >> 2,

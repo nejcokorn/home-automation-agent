@@ -55,7 +55,7 @@ export class DeviceController {
 			forbidNonWhitelisted: true
 		})) config: DeviceConfigDto[],
 	) {
-		// // Set device configuration
+		// Set device configuration
 		try {
 			await this.device.setConfig(iface, deviceId, config);
 		} catch (error) {
@@ -65,6 +65,15 @@ export class DeviceController {
 		// Get device configuration
 		// Let user know what new configuration is like
 		return await this.device.getConfig(iface, deviceId);
+	}
+
+	@Post('can/:iface/device/:deviceId/eeprom')
+	async writeEEPROM(
+		@Param('iface') iface: string,
+		@Param('deviceId') deviceId: number
+	) {
+		// Write device configuration
+		return await this.device.writeEEPROM(iface, deviceId);
 	}
 	
 	@Delete('can/:iface/device/:deviceId/config')

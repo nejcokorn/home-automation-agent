@@ -10,7 +10,7 @@ export const CommControl = {
 export const DataControl = {
 	Empty: 0x00,
 	Config: 0x80,
-	EEPROM: 0x40,
+	WriteEEPROM: 0x40,
 	Write: 0x20,
 	Input: 0x10,
 	DataType: 0x0c,
