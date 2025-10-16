@@ -59,7 +59,7 @@ export class DeviceController {
 		try {
 			await this.device.setConfig(iface, deviceId, config);
 		} catch (error) {
-			console.log(error);
+			return error;
 		}
 
 		// Get device configuration
@@ -76,18 +76,24 @@ export class DeviceController {
 		return await this.device.writeEEPROM(iface, deviceId);
 	}
 	
-	@Delete('can/:iface/device/:deviceId/config')
-	async removeConfig(
+	@Get('can/:iface/device/:deviceId/:portType/:portDirection/:portId')
+	async readPort(
 		@Param('iface') iface: string,
 		@Param('deviceId') deviceId: number,
+		@Param('portType') portType: string,
+		@Param('portType') portDirection: string,
+		@Param('portId') portId: number,
 	) {
 		// TODO
 	}
 
-	@Post('can/:iface/device/:deviceId/command')
-	async command(
+	@Post('can/:iface/device/:deviceId/:portType/:portDirection/:portId')
+	async writePort(
 		@Param('iface') iface: string,
 		@Param('deviceId') deviceId: number,
+		@Param('portType') portType: string,
+		@Param('portType') portDirection: string,
+		@Param('portId') portId: number,
 	) {
 		// TODO
 	}
