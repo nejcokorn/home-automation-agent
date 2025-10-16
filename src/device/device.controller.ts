@@ -1,6 +1,6 @@
-import { Body, Controller, Delete, Get, Param, ParseArrayPipe, Post } from "@nestjs/common";
+import { Body, Controller, Get, Param, ParseArrayPipe, Post, UsePipes, ValidationPipe } from "@nestjs/common";
 import { DeviceService } from "src/device/device.service";
-import { DeviceConfigDto } from "./device.config.dto";
+import { DeviceConfigDto, DeviceCommandDto } from "./device.dto";
 
 @Controller()
 export class DeviceController {
@@ -44,14 +44,17 @@ export class DeviceController {
 	}
 	
 	@Post('can/:iface/device/:deviceId/config')
+	@UsePipes(new ValidationPipe({
+		transform: true,
+		whitelist: true,
+		forbidNonWhitelisted: true
+	}))
 	async setConfig(
 		@Param('iface') iface: string,
 		@Param('deviceId') deviceId: number,
 		@Body(new ParseArrayPipe({
 			items: DeviceConfigDto,
-			// Remove unknown properties
 			whitelist: true,
-			// Return 400 error on unknown fields
 			forbidNonWhitelisted: true
 		})) config: DeviceConfigDto[],
 	) {
@@ -76,25 +79,42 @@ export class DeviceController {
 		return await this.device.writeEEPROM(iface, deviceId);
 	}
 	
-	@Get('can/:iface/device/:deviceId/:portType/:portDirection/:portId')
+	@Get('can/:iface/device/:deviceId/:signalType/:direction/:portId')
 	async readPort(
 		@Param('iface') iface: string,
 		@Param('deviceId') deviceId: number,
-		@Param('portType') portType: string,
-		@Param('portType') portDirection: string,
+		@Param('signalType') signalType: string,
+		@Param('direction') direction: string,
 		@Param('portId') portId: number,
 	) {
-		// TODO
+		// Read from device port
+		let state = await this.device.readPort(iface, deviceId, signalType, direction, portId);
+		return {
+			state: state
+		}
 	}
 
-	@Post('can/:iface/device/:deviceId/:portType/:portDirection/:portId')
+	@Post('can/:iface/device/:deviceId/:signalType/:direction/:portId')
+	@UsePipes(new ValidationPipe({
+		transform: true,
+		whitelist: true,
+		forbidNonWhitelisted: true
+	}))
 	async writePort(
 		@Param('iface') iface: string,
 		@Param('deviceId') deviceId: number,
-		@Param('portType') portType: string,
-		@Param('portType') portDirection: string,
+		@Param('signalType') signalType: string,
+		@Param('direction') direction: string,
 		@Param('portId') portId: number,
+		@Body() payload: DeviceCommandDto,
 	) {
-		// TODO
+		// Write to device port
+		await this.device.writePort(iface, deviceId, signalType, direction, portId, payload.state);
+
+		// Read from device port
+		let state = await this.device.readPort(iface, deviceId, signalType, direction, portId);
+		return {
+			state: state
+		}
 	}
 }

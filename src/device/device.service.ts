@@ -4,7 +4,7 @@ import { CommControl, DataControl, ConfigType, DataType, DeviceFrame } from "src
 import { LoggerExtra } from "src/extras/logger.extra";
 import { ExtraPromise } from "src/extras/promise.extra";
 import { CanService } from "src/can/can.service";
-import { DeviceConfigDto } from "./device.config.dto";
+import { DeviceConfigDto } from "./device.dto";
 
 type Unsubscribe = () => void;
 
@@ -13,11 +13,14 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 	private readonly logger = new LoggerExtra(DeviceService.name);
 
 	private canAddresses = {
-		broadcast: 0x7FF,
-		EEPROM: 0xF6,
-		config: 0xF5,
-		discover: 0xF4,
+		readPort: 0xF0,
+		write: 0xF1,
+		discover: 0xF2,
 		ping: 0xF3,
+		readConfig: 0xF4,
+		writeConfig: 0xF5,
+		writeEEPROM: 0xF6,
+		broadcast: 0x7FF,
 	}
 
 	constructor(
@@ -32,11 +35,75 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 		
 	}
 
-	public async write(iface: string) {
-	}
-	
+	public async readPort(iface: string, deviceId: number, signalType: string, direction: string, portId: number) {
+		let unsubscribe: Unsubscribe = () => {};
+		
+		return await new ExtraPromise((resolve, reject) => {
+			let buf : Buffer = Buffer.alloc(8);
+			let commControl : number = CommControl.Command;
+			let dataCtrl : number = (signalType == "analog" ? DataControl.Analog : DataControl.Empty) | (direction == "input" ? DataControl.Input : DataControl.Empty)
+			buf[0] = this.canAddresses.readPort;
+			buf[1] = commControl;
+			buf[2] = dataCtrl;
+			buf[3] = portId;
 
-	public async read(iface: string) {
+			unsubscribe = this.can.subscribe((frame: CanFrame) => {
+				let payload = this.parseFrame(frame);
+				if (payload.to == this.canAddresses.readPort
+					&& payload.commControl.isCommand == true
+					&& payload.commControl.isAcknowledge == true
+					&& payload.dataCtrl.isWrite == false
+					&& payload.port == portId
+				) {
+					resolve(payload.data);
+				}
+			});
+			
+			this.can.send(iface, {
+				id: deviceId,
+				data: buf
+			});
+		})
+		.timeout(1000)
+		.finally(() => {
+			unsubscribe();
+		});
+	}
+
+	public async writePort(iface: string, deviceId: number, signalType: string, direction: string, portId: number, data: number) {
+		let unsubscribe: Unsubscribe = () => {};
+		
+		return await new ExtraPromise((resolve, reject) => {
+			let buf : Buffer = Buffer.alloc(8);
+			let commControl : number = CommControl.Command;
+			let dataCtrl : number = DataControl.Write | (signalType == "analog" ? DataControl.Analog : DataControl.Empty) | (direction == "input" ? DataControl.Input : DataControl.Empty)
+			buf[0] = this.canAddresses.readPort;
+			buf[1] = commControl;
+			buf[2] = dataCtrl;
+			buf[3] = portId;
+			Buffer.from([data >> 24, data >> 16, data >> 8, data]).copy(buf, 4);
+
+			unsubscribe = this.can.subscribe((frame: CanFrame) => {
+				let payload = this.parseFrame(frame);
+				if (payload.to == this.canAddresses.readPort
+					&& payload.commControl.isCommand == true
+					&& payload.commControl.isAcknowledge == true
+					&& payload.dataCtrl.isWrite == true
+					&& payload.port == portId
+				) {
+					resolve(payload.data);
+				}
+			});
+			
+			this.can.send(iface, {
+				id: deviceId,
+				data: buf
+			});
+		})
+		.timeout(1000)
+		.finally(() => {
+			unsubscribe();
+		});
 	}
 	
 	public async ping(iface: string, deviceId: number) {
@@ -136,7 +203,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 					let commControl : number = CommControl.Command;
 					let dataCtrl : number = DataControl.Config | DataControl.Input | DataControl.Write;
 					let buf : Buffer = Buffer.alloc(8);
-					buf[0] = this.canAddresses.config;
+					buf[0] = this.canAddresses.writeConfig;
 					buf[1] = commControl;
 					buf[2] = dataCtrl;
 					buf[3] = idxPort + 1;
@@ -146,7 +213,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 					// Set listener for ACK
 					unsubscribe = this.can.subscribe((frame: CanFrame) => {
 						let payload = this.parseFrame(frame);
-						if (payload.to == this.canAddresses.config
+						if (payload.to == this.canAddresses.writeConfig
 							&& payload.from == deviceId
 							&& payload.commControl.isCommand == true
 							&& payload.commControl.isAcknowledge == true
@@ -194,7 +261,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 					let commControl : number = CommControl.Command;
 					let dataCtrl : number = DataControl.Config | DataControl.Input; // !DataControl.Write
 					let buf : Buffer = Buffer.alloc(8);
-					buf[0] = this.canAddresses.config;
+					buf[0] = this.canAddresses.readConfig;
 					buf[1] = commControl;
 					buf[2] = dataCtrl;
 					buf[3] = idxPort + 1;
@@ -202,7 +269,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 
 					unsubscribe = this.can.subscribe((frame: CanFrame) => {
 						let payload = this.parseFrame(frame);
-						if (payload.to == this.canAddresses.config
+						if (payload.to == this.canAddresses.readConfig
 							&& payload.commControl.isCommand == true
 							&& payload.commControl.isAcknowledge == true
 							&& payload.dataCtrl.isConfig == true
@@ -241,13 +308,13 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 			let buf : Buffer = Buffer.alloc(8);
 			let commControl : number = CommControl.Command;
 			let dataCtrl : number = DataControl.Config | DataControl.WriteEEPROM;
-			buf[0] = this.canAddresses.EEPROM;
+			buf[0] = this.canAddresses.writeEEPROM;
 			buf[1] = commControl;
 			buf[2] = dataCtrl;
 
 			unsubscribe = this.can.subscribe((frame: CanFrame) => {
 				let payload = this.parseFrame(frame);
-				if (payload.to == this.canAddresses.EEPROM
+				if (payload.to == this.canAddresses.writeEEPROM
 					&& payload.commControl.isCommand == true
 					&& payload.commControl.isAcknowledge == true
 					&& payload.dataCtrl.isWriteEEPROM == true

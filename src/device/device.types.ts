@@ -55,6 +55,7 @@ export type DeviceFrame = {
 		isConfig: boolean;
 		isWriteEEPROM: boolean;
 		isWrite: boolean;
+		isAnalog: boolean;
 		isInput: boolean;
 		dataType: DataType;
 	};
