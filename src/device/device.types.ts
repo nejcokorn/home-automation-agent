@@ -12,8 +12,9 @@ export const DataControl = {
 	Config: 0x80,
 	WriteEEPROM: 0x40,
 	Write: 0x20,
-	Input: 0x10,
-	DataType: 0x0c,
+	Analog: 0x10,
+	Input: 0x08,
+	DataType: 0x06,
 };
 
 export enum DataType {

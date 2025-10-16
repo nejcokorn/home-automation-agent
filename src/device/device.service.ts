@@ -255,8 +255,6 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 					resolve(true);
 				}
 			});
-
-			console.log(buf);
 			
 			this.can.send(iface, {
 				id: deviceId,
@@ -286,8 +284,9 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 			isConfig : frame.data[2] & DataControl.Config ? true : false,
 			isWriteEEPROM : frame.data[2] & DataControl.WriteEEPROM ? true : false,
 			isWrite : frame.data[2] & DataControl.Write ? true : false,
+			isAnalog : frame.data[2] & DataControl.Analog ? true : false,
 			isInput : frame.data[2] & DataControl.Input ? true : false,
-			dataType : (frame.data[2] & DataControl.DataType) >> 2,
+			dataType : (frame.data[2] & DataControl.DataType) >> 1,
 		};
 		let port = frame.data[3];
 		if (dataCtrl.isConfig) {
