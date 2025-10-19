@@ -13,7 +13,9 @@ export class DeviceController {
 		@Param('iface') iface: string
 	) {
 		// Get devices
-		let devices = await this.device.discover(iface);
+		let devices = await this.device.discover({
+			iface
+		});
 
 		// Return list of devices this.discovered
 		return devices;
@@ -25,7 +27,10 @@ export class DeviceController {
 		@Param('deviceId') deviceId: number
 	) {
 		// Get devices
-		let devices = await this.device.ping(iface, deviceId);
+		let devices = await this.device.ping({
+			iface,
+			deviceId
+		});
 
 		// Return list of devices this.discovered
 		return devices;
@@ -37,7 +42,10 @@ export class DeviceController {
 		@Param('deviceId') deviceId: number,
 	) {
 		// Get device configuration
-		let config = this.device.getConfig(iface, deviceId);
+		let config = this.device.getConfig({
+			iface,
+			deviceId
+		});
 
 		// Return configuration
 		return config;
@@ -60,14 +68,21 @@ export class DeviceController {
 	) {
 		// Set device configuration
 		try {
-			await this.device.setConfig(iface, deviceId, config);
+			await this.device.setConfig({
+				iface,
+				deviceId,
+				config
+			});
 		} catch (error) {
 			return error;
 		}
 
 		// Get device configuration
 		// Let user know what new configuration is like
-		return await this.device.getConfig(iface, deviceId);
+		return await this.device.getConfig({
+			iface,
+			deviceId
+		});
 	}
 
 	@Post('can/:iface/device/:deviceId/eeprom')
@@ -88,7 +103,13 @@ export class DeviceController {
 		@Param('portId') portId: number,
 	) {
 		// Read from device port
-		let state = await this.device.readPort(iface, deviceId, signalType, direction, portId);
+		let state = await this.device.readPort({
+			iface,
+			deviceId,
+			signalType,
+			direction,
+			portId
+		});
 		return {
 			state: state
 		}
@@ -121,7 +142,13 @@ export class DeviceController {
 		});
 
 		// Read from device port
-		let state = await this.device.readPort(iface, deviceId, signalType, direction, portId);
+		let state = await this.device.readPort({
+			iface,
+			deviceId,
+			signalType,
+			direction,
+			portId
+		});
 		return {
 			state: state
 		}
