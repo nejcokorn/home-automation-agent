@@ -132,7 +132,9 @@ export class CanService implements OnModuleInit, OnModuleDestroy {
 			channel.addListener("onMessage", (frame: CanFrame) => {
 				try {
 					can.iface.rxCount++;
-					for (const l of this.listeners) l(frame);
+					for (const listener of this.listeners) {
+						listener(frame);
+					}
 				} catch (error) {
 					this.logger.error(`[${iface}] RX handler error: ${(error as Error).message}`,);
 				}
