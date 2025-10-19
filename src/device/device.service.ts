@@ -1,16 +1,27 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from "@nestjs/common";
 import { CanFrame } from "src/can/can.types";
-import { CommControl, DataControl, ConfigType, DataType, DeviceFrame } from "src/device/device.types";
+import { CommControl, DataControl, ConfigType, DataType, DeviceFrame, OperationType } from "src/device/device.types";
 import { LoggerExtra } from "src/extras/logger.extra";
 import { ExtraPromise } from "src/extras/promise.extra";
 import { CanService } from "src/can/can.service";
 import { DeviceConfigDto } from "./device.dto";
+import { write } from "fs";
 
 type Unsubscribe = () => void;
 
 @Injectable()
 export class DeviceService implements OnModuleInit, OnModuleDestroy {
 	private readonly logger = new LoggerExtra(DeviceService.name);
+
+	private unsubscribeEvents: Unsubscribe = () => {};
+	private listeners = new Set<(event: DeviceFrame) => void>();
+	private timeout = {
+		general: 50,
+		grace: 70,
+		ping: 100,
+		discover: 100,
+		EEPROM: 10000 // Writing to EEPROM can take longer
+	}
 
 	private canAddresses = {
 		readPort: 0xF0,
@@ -28,11 +39,25 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 	) {}
 
 	async onModuleInit() {
-
+		this.unsubscribeEvents = this.can.subscribe((frame: CanFrame) => {
+			let payload = this.parseFrame(frame);
+			// Catch all boradcast packages
+			if (payload.to == this.canAddresses.broadcast) {
+				// Distrubute this package to listeners
+				for (const listener of this.listeners) {
+					listener(payload);
+				}
+			}
+		});
 	}
 
 	async onModuleDestroy() {
-		
+		this.unsubscribeEvents();
+	}
+
+	subscribe(fn: (event: DeviceFrame) => void): Unsubscribe {
+		this.listeners.add(fn);
+		return () => this.listeners.delete(fn);
 	}
 
 	public async readPort(iface: string, deviceId: number, signalType: string, direction: string, portId: number) {
@@ -64,23 +89,28 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 				data: buf
 			});
 		})
-		.timeout(1000)
+		.timeout(this.timeout.general)
 		.finally(() => {
 			unsubscribe();
 		});
 	}
 
-	public async writePort(iface: string, deviceId: number, signalType: string, direction: string, portId: number, data: number) {
+	public async writePort(options: {iface: string, deviceId: number, signalType: string, direction: string, portId: number, toggle: Boolean, state: number, delayOff: number}) {
 		let unsubscribe: Unsubscribe = () => {};
 		
 		return await new ExtraPromise((resolve, reject) => {
+			let data = options.delayOff ? options.delayOff : options.state;
 			let buf : Buffer = Buffer.alloc(8);
 			let commControl : number = CommControl.Command;
-			let dataCtrl : number = DataControl.Write | (signalType == "analog" ? DataControl.Analog : DataControl.Empty) | (direction == "input" ? DataControl.Input : DataControl.Empty)
+			let dataCtrl : number =
+				(options.toggle ? OperationType.Toggle : OperationType.Write) << 4
+				| (options.signalType == "analog" ? DataControl.Analog : DataControl.Empty)
+				| (options.direction == "input" ? DataControl.Input : DataControl.Empty)
+				| (options.delayOff > 0 ? DataType.Int : DataControl.Empty);
 			buf[0] = this.canAddresses.readPort;
 			buf[1] = commControl;
 			buf[2] = dataCtrl;
-			buf[3] = portId;
+			buf[3] = options.portId;
 			Buffer.from([data >> 24, data >> 16, data >> 8, data]).copy(buf, 4);
 
 			unsubscribe = this.can.subscribe((frame: CanFrame) => {
@@ -88,19 +118,19 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 				if (payload.to == this.canAddresses.readPort
 					&& payload.commControl.isCommand == true
 					&& payload.commControl.isAcknowledge == true
-					&& payload.dataCtrl.isWrite == true
-					&& payload.port == portId
+					&& (payload.dataCtrl.isWrite == true || payload.dataCtrl.isToggle == true)
+					&& payload.port == options.portId
 				) {
 					resolve(payload.data);
 				}
 			});
 			
-			this.can.send(iface, {
-				id: deviceId,
+			this.can.send(options.iface, {
+				id: options.deviceId,
 				data: buf
 			});
 		})
-		.timeout(1000)
+		.timeout(this.timeout.general)
 		.finally(() => {
 			unsubscribe();
 		});
@@ -120,7 +150,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 
 			let timeout = setTimeout(() => {
 				resolve(deviceList);
-			}, 100)
+			}, this.timeout.grace);
 			unsubscribe = this.can.subscribe((frame: CanFrame) => {
 				let payload = this.parseFrame(frame);
 				if (payload.to == this.canAddresses.ping
@@ -142,7 +172,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 				data: buf
 			});
 		})
-		.timeout(1000)
+		.timeout(this.timeout.ping)
 		.finally(() => {
 			unsubscribe();
 		});
@@ -162,10 +192,11 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 
 			let timeout = setTimeout(() => {
 				resolve(deviceList);
-			}, 100);
+			}, this.timeout.grace);
 			unsubscribe = this.can.subscribe((frame: CanFrame) => {
 				let payload = this.parseFrame(frame);
 				if (payload.to == this.canAddresses.discover
+					&& payload.commControl.isCommand == true
 					&& payload.commControl.isDiscovery == true
 					&& payload.commControl.isAcknowledge == true
 				) {
@@ -178,7 +209,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 				data: buf
 			});
 		})
-		.timeout(1000)
+		.timeout(this.timeout.discover)
 		.finally(() => {
 			unsubscribe();
 		});
@@ -201,7 +232,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 
 					// Construct config for each input port
 					let commControl : number = CommControl.Command;
-					let dataCtrl : number = DataControl.Config | DataControl.Input | DataControl.Write;
+					let dataCtrl : number = DataControl.Config | DataControl.Input | OperationType.Write << 4;
 					let buf : Buffer = Buffer.alloc(8);
 					buf[0] = this.canAddresses.writeConfig;
 					buf[1] = commControl;
@@ -231,7 +262,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 						data: buf
 					});
 				})
-				.timeout(1000)
+				.timeout(this.timeout.general)
 				.catch((error) => {
 					return error;
 				})
@@ -285,7 +316,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 						data: buf
 					});
 				})
-				.timeout(1000)
+				.timeout(this.timeout.general)
 				.finally(() => {
 					unsubscribe();
 				});
@@ -328,7 +359,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 				data: buf
 			});
 		})
-		.timeout(10000) // Writing to EEPROM can take longer
+		.timeout(this.timeout.EEPROM)
 		.finally(() => {
 			unsubscribe();
 		});
@@ -350,10 +381,12 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 		let dataCtrl = {
 			isConfig : frame.data[2] & DataControl.Config ? true : false,
 			isWriteEEPROM : frame.data[2] & DataControl.WriteEEPROM ? true : false,
-			isWrite : frame.data[2] & DataControl.Write ? true : false,
+			isRead : (frame.data[2] & DataControl.Operation) >> 4 == OperationType.Read ? true : false,
+			isWrite : (frame.data[2] & DataControl.Operation) >> 4 == OperationType.Write ? true : false,
+			isToggle : (frame.data[2] & DataControl.Operation) >> 4 == OperationType.Toggle ? true : false,
 			isAnalog : frame.data[2] & DataControl.Analog ? true : false,
 			isInput : frame.data[2] & DataControl.Input ? true : false,
-			dataType : (frame.data[2] & DataControl.DataType) >> 1,
+			dataType : (frame.data[2] & DataControl.DataType),
 		};
 		let port = frame.data[3];
 		if (dataCtrl.isConfig) {
@@ -385,7 +418,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 		let ports: number[] = [];
 		for (let i = 0; i < numPorts; i++) {
 			if (((hex >> i) & 0x01) == 1) {
-				ports.push(i+1);
+				ports.push(i);
 			}
 		}
 
@@ -396,7 +429,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 	private portsToHex(ports: number[]): number {
 		let hex = 0x0;
 		for (let port of ports) {
-			hex = hex | (1 << (port -1));
+			hex = hex | (1 << (port));
 		}
 		return hex;
 	}

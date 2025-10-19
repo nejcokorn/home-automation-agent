@@ -109,7 +109,16 @@ export class DeviceController {
 		@Body() payload: DeviceCommandDto,
 	) {
 		// Write to device port
-		await this.device.writePort(iface, deviceId, signalType, direction, portId, payload.state);
+		await this.device.writePort({
+			iface,
+			deviceId,
+			signalType,
+			direction,
+			portId,
+			toggle: payload.toggle,
+			state: payload.state,
+			delayOff: payload.delayOff
+		});
 
 		// Read from device port
 		let state = await this.device.readPort(iface, deviceId, signalType, direction, portId);

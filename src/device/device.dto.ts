@@ -1,4 +1,4 @@
-import { IsDefined, IsArray, IsInt, Max, Min, ArrayMinSize, ArrayMaxSize } from 'class-validator';
+import { IsDefined, IsArray, IsInt, Max, Min, ArrayMinSize, ArrayMaxSize, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class DeviceConfigDto {
@@ -25,24 +25,24 @@ export class DeviceConfigDto {
 	@ArrayMinSize(0)
 	@ArrayMaxSize(12)
 	@IsInt({ each: true })
-	@Min(1, { each: true })
-	@Max(12, { each: true })
+	@Min(0, { each: true })
+	@Max(11, { each: true })
 	ActionToggle: number[];
 
 	@IsArray()
 	@ArrayMinSize(0)
 	@ArrayMaxSize(12)
 	@IsInt({ each: true })
-	@Min(1, { each: true })
-	@Max(12, { each: true })
+	@Min(0, { each: true })
+	@Max(11, { each: true })
 	ActionHigh: number[];
 
 	@IsArray()
 	@ArrayMinSize(0)
 	@ArrayMaxSize(12)
 	@IsInt({ each: true })
-	@Min(1, { each: true })
-	@Max(12, { each: true })
+	@Min(0, { each: true })
+	@Max(11, { each: true })
 	ActionLow: number[];
 
 	// Number in microseconds
@@ -83,9 +83,21 @@ export class DeviceConfigDto {
 }
 
 export class DeviceCommandDto {
-	@IsInt() @Min(0) @Max(1)
+	@IsBoolean()
 	@IsDefined()
+	@Type(() => Boolean)
+	toggle: Boolean;
+
 	@IsInt({ message: 'state must be an integer' })
+	@Min(0) @Max(1)
+	@IsDefined()
 	@Type(() => Number)
 	state: number;
+
+	@IsInt({ message: 'delayOff must be an integer' })
+	@Min(0) @Max(16777215)
+	@IsDefined()
+	@Type(() => Number)
+	delayOff: number;
+
 }
