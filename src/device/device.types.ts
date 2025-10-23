@@ -4,7 +4,8 @@ export const CommControl = {
 	Discovery: 0x40,
 	Ping: 0x20,
 	ACK: 0x10,
-	Error: 0x08,
+	Wait: 0x08,
+	Error: 0x04,
 };
 
 export const DataControl = {
@@ -55,6 +56,7 @@ export type DeviceFrame = {
 		isDiscovery: boolean;
 		isPing: boolean;
 		isAcknowledge: boolean;
+		isWait: boolean;
 		isError: boolean;
 	};
 	dataCtrl: {

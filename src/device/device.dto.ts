@@ -1,5 +1,19 @@
-import { IsDefined, IsArray, IsInt, Max, Min, ArrayMinSize, ArrayMaxSize, IsBoolean } from 'class-validator';
+import { IsDefined, IsArray, IsInt, Max, Min, ValidateNested, ArrayMaxSize, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
+
+export class ActionDto {
+	@IsInt()
+	@Min(0)
+	@Max(255)
+	deviceId: number;
+
+	@IsArray()
+	@ArrayMaxSize(12)
+	@IsInt({ each: true })
+	@Min(0, { each: true })
+	@Max(11, { each: true })
+	ports: number[];
+}
 
 export class DeviceConfigDto {
 	// Button press states (e.g., 0/1)
@@ -20,30 +34,20 @@ export class DeviceConfigDto {
 	@Max(1)
 	Switch: number;
 
-	// Action codes
 	@IsArray()
-	@ArrayMinSize(0)
-	@ArrayMaxSize(12)
-	@IsInt({ each: true })
-	@Min(0, { each: true })
-	@Max(11, { each: true })
-	ActionToggle: number[];
+	@ValidateNested({ each: true })
+	@Type(() => ActionDto)
+	ActionToggle: ActionDto[];
 
 	@IsArray()
-	@ArrayMinSize(0)
-	@ArrayMaxSize(12)
-	@IsInt({ each: true })
-	@Min(0, { each: true })
-	@Max(11, { each: true })
-	ActionHigh: number[];
+	@ValidateNested({ each: true })
+	@Type(() => ActionDto)
+	ActionHigh: ActionDto[];
 
 	@IsArray()
-	@ArrayMinSize(0)
-	@ArrayMaxSize(12)
-	@IsInt({ each: true })
-	@Min(0, { each: true })
-	@Max(11, { each: true })
-	ActionLow: number[];
+	@ValidateNested({ each: true })
+	@Type(() => ActionDto)
+	ActionLow: ActionDto[];
 
 	// Number in microseconds
 	@IsInt()

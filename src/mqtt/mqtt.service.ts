@@ -1,28 +1,26 @@
-import {
-	Injectable,
-	Logger,
-	OnModuleInit,
-	OnModuleDestroy,
-} from "@nestjs/common";
+import { Injectable, Logger, OnModuleInit, OnModuleDestroy } from "@nestjs/common";
 import { connect, MqttClient, IClientOptions } from "mqtt";
+import { DeviceService } from "src/device/device.service";
 
 @Injectable()
 export class MqttService implements OnModuleInit, OnModuleDestroy {
 	private readonly logger = new Logger(MqttService.name);
 	private client!: MqttClient;
 
+	constructor(
+		private readonly device: DeviceService
+	) {}
+
 	onModuleInit() {
-		const url = process.env.MQTT_URL ?? "mqtt://localhost:1883";
+		const url = "mqtt://localhost:1883";
 		const opts: IClientOptions = {
-			clientId:
-				process.env.MQTT_CLIENT_ID ??
-				`can-bridge-${Math.random().toString(16).slice(2)}`,
+			clientId: `can-agent-${Math.random().toString(16).slice(2)}`,
 			username: process.env.MQTT_USERNAME || undefined,
 			password: process.env.MQTT_PASSWORD || undefined,
-			reconnectPeriod: 10000,
-			clean: false, // ohrani naročnine
+			reconnectPeriod: 5000,
+			clean: true,
 			will: {
-				topic: "can/bridge/lwt",
+				topic: "agent/status",
 				payload: Buffer.from("offline"),
 				retain: true,
 				qos: 0,
@@ -30,8 +28,9 @@ export class MqttService implements OnModuleInit, OnModuleDestroy {
 		};
 		this.client = connect(url, opts);
 		this.client.on("connect", () => {
-			this.logger.log(`MQTT connected to ${url}`);
-			this.client.publish("can/bridge/lwt", "online", { retain: true });
+			this.logger.log(`MQTT connected to ${url}`); 
+			this.client.publish("agent/status", "online", { retain: true });
+			this.client.subscribe("agent/status");
 		});
 		this.client.on("reconnect", () =>
 			this.logger.warn("MQTT reconnecting…"),
@@ -39,6 +38,9 @@ export class MqttService implements OnModuleInit, OnModuleDestroy {
 		this.client.on("error", (e) =>
 			this.logger.error(`MQTT error: ${e.message}`),
 		);
+
+		// Set subscriptions
+		this.subscribe('can/device/+/', this.discover);
 	}
 
 	onModuleDestroy() {
@@ -90,5 +92,11 @@ export class MqttService implements OnModuleInit, OnModuleDestroy {
 			if (s !== "+" && s !== a) return false;
 		}
 		return subParts.length === actParts.length;
+	}
+
+	// can/
+	private async discover(topic: string, payload: any){
+		// let devices = await this.device.discover(topic.split('/')[1]);
+		
 	}
 }

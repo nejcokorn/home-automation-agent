@@ -4,8 +4,7 @@ import { CommControl, DataControl, ConfigType, DataType, DeviceFrame, OperationT
 import { LoggerExtra } from "src/extras/logger.extra";
 import { ExtraPromise } from "src/extras/promise.extra";
 import { CanService } from "src/can/can.service";
-import { DeviceConfigDto } from "./device.dto";
-import { write } from "fs";
+import { DeviceConfigDto, ActionDto } from "./device.dto";
 
 type Unsubscribe = () => void;
 
@@ -220,58 +219,69 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 		for (let idxPort = 0; idxPort < options.config.length; idxPort++) {
 			let inputConfig = options.config[idxPort];
 			for (const configType in inputConfig) {
-				let unsubscribe: Unsubscribe = () => {};
-				await new ExtraPromise((resolve, reject) => {
-					let configData;
-					if (["ActionToggle", "ActionHigh", "ActionLow"].includes(configType)) {
-						// Array of number
-						configData = this.portsToHex(inputConfig[configType]);
-					} else {
-						// Data is just a number
-						configData = inputConfig[configType];
+				const value = inputConfig[configType];
+
+				if (["ActionToggle", "ActionHigh", "ActionLow"].includes(configType)) {
+					for (const action of inputConfig[configType]) {
+						let data = action.deviceId << 16 | this.portsToHex(action.ports);
+						await this.sendConfig({
+							...options, idxPort,
+							configType,
+							data: data
+						});
 					}
-
-					// Construct config for each input port
-					let commControl : number = CommControl.Command;
-					let dataCtrl : number = DataControl.Config | DataControl.Input | OperationType.Write << 4;
-					let buf : Buffer = Buffer.alloc(8);
-					buf[0] = this.canAddresses.writeConfig;
-					buf[1] = commControl;
-					buf[2] = dataCtrl;
-					buf[3] = idxPort;
-					buf[4] = ConfigType[configType];
-					Buffer.from([configData >> 16, configData >> 8, configData]).copy(buf, 5);
-
-					// Set listener for ACK
-					unsubscribe = this.can.subscribe((frame: CanFrame) => {
-						let payload = this.parseFrame(frame);
-						if (payload.to == this.canAddresses.writeConfig
-							&& payload.from == options.deviceId
-							&& payload.commControl.isCommand == true
-							&& payload.commControl.isAcknowledge == true
-							&& payload.dataCtrl.isConfig == true
-							&& payload.dataCtrl.isInput == true
-							&& payload.dataCtrl.isWrite == true
-							&& payload.configCtrl == ConfigType[configType]
-						) {
-							resolve(payload);
-						}
+				} else {
+					await this.sendConfig({
+						...options,
+						idxPort,
+						configType,
+						data: value
 					});
-					// Sent config data
-					this.can.send(options.iface, {
-						id: options.deviceId,
-						data: buf
-					});
-				})
-				.timeout(this.timeout.config)
-				.catch((error) => {
-					return error;
-				})
-				.finally(() => {
-					unsubscribe();
-				});
+				}
 			}
 		}
+	}
+
+	private async sendConfig(options: { iface: string, deviceId: number, idxPort: number, configType: string, data: number }) {
+		let unsubscribe: Unsubscribe = () => {};
+		await new ExtraPromise((resolve, reject) => {
+			// Construct buffer
+			let commControl: number = CommControl.Command;
+			let dataCtrl: number = DataControl.Config | DataControl.Input | (OperationType.Write << 4);
+			let buf: Buffer = Buffer.alloc(8);
+			buf[0] = this.canAddresses.writeConfig;
+			buf[1] = commControl;
+			buf[2] = dataCtrl;
+			buf[3] = options.idxPort;
+			buf[4] = ConfigType[options.configType];
+			Buffer.from([options.data >> 16, options.data >> 8, options.data]).copy(buf, 5);
+
+			// Subscribe for ACK
+			unsubscribe = this.can.subscribe((frame: CanFrame) => {
+				let payload = this.parseFrame(frame);
+				if (
+					payload.to == this.canAddresses.writeConfig &&
+					payload.from == options.deviceId &&
+					payload.commControl.isCommand == true &&
+					payload.commControl.isAcknowledge == true &&
+					payload.dataCtrl.isConfig == true &&
+					payload.dataCtrl.isInput == true &&
+					payload.dataCtrl.isWrite == true &&
+					payload.configCtrl == ConfigType[options.configType]
+				) {
+					resolve(payload);
+				}
+			});
+
+			// Send data
+			this.can.send(options.iface, {
+				id: options.deviceId,
+				data: buf
+			});
+		})
+		.timeout(this.timeout.config)
+		.catch((error) => error)
+		.finally(() => unsubscribe());
 	}
 
 	public async getConfig(options: { iface: string, deviceId: number }) {
@@ -288,11 +298,12 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 					continue;
 				}
 				let unsubscribe: Unsubscribe = () => {};
-				let configValue = await new ExtraPromise<number>((resolve, reject) => {
+				let configValue = await new ExtraPromise<number | ActionDto[]>((resolve, reject) => {
 					// Construct config for each input port
 					let commControl : number = CommControl.Command;
 					let dataCtrl : number = DataControl.Config | DataControl.Input; // !DataControl.Write
 					let buf : Buffer = Buffer.alloc(8);
+					let actionData: ActionDto[] = [];
 					buf[0] = this.canAddresses.readConfig;
 					buf[1] = commControl;
 					buf[2] = dataCtrl;
@@ -308,7 +319,20 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 							&& payload.dataCtrl.isInput
 							&& payload.configCtrl == Number(configValues[configIdx])
 						) {
-							resolve(payload.data);
+							if (["ActionToggle", "ActionHigh", "ActionLow"].includes(configNames[configIdx])) {
+								let deviceId = payload.data >> 16;
+								if (deviceId != 0xFF) {
+									actionData.push({
+										deviceId,
+										ports: this.hexToPorts(payload.data & 0xFFFF)
+									})
+								}
+								if (!payload.commControl.isWait) {
+									resolve(actionData);
+								}
+							} else {
+								resolve(payload.data);
+							}
 						}
 					});
 
@@ -321,12 +345,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 				.finally(() => {
 					unsubscribe();
 				});
-				if (["ActionToggle", "ActionHigh", "ActionLow"].includes(configNames[configIdx])) {
-					// Transform hex into array of numbers
-					inputConfig[configNames[configIdx]] = this.hexToPorts(configValue);
-				} else {
-					inputConfig[configNames[configIdx]] = configValue;
-				}
+				inputConfig[configNames[configIdx]] = configValue;
 			}
 			deviceConfig.push(inputConfig);
 		}
@@ -377,6 +396,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 			isDiscovery: frame.data[1] & CommControl.Discovery ? true : false,
 			isPing: frame.data[1] & CommControl.Ping ? true : false,
 			isAcknowledge: frame.data[1] & CommControl.ACK ? true : false,
+			isWait: frame.data[1] & CommControl.Wait ? true : false,
 			isError: frame.data[1] & CommControl.Error ? true : false
 		};
 		let dataCtrl = {
