@@ -21,7 +21,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 		grace: 70,
 		ping: 100,
 		discover: 100,
-		EEPROM: 10000 // Writing to EEPROM can take longer
+		EEPROM: 60000 // Long operation - timeout after 1 min (usually between 30 sec and 1 min)
 	}
 
 	private canAddresses = {
@@ -361,13 +361,16 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 	public async writeEEPROM(iface: string, deviceId: number) {
 		let unsubscribe: Unsubscribe = () => {};
 		
-		return await new ExtraPromise((resolve, reject) => {
+		// TODO 16 should not be hardcoded
+		for (let idxPort = 0; idxPort < 16; idxPort++) {
+			await new ExtraPromise((resolve, reject) => {
 			let buf : Buffer = Buffer.alloc(8);
 			let commControl : number = CommControl.Command;
 			let dataCtrl : number = DataControl.Config | DataControl.WriteEEPROM;
 			buf[0] = this.canAddresses.writeEEPROM;
 			buf[1] = commControl;
 			buf[2] = dataCtrl;
+				buf[7] = idxPort;
 
 			unsubscribe = this.can.subscribe((frame: CanFrame) => {
 				let payload = this.parseFrame(frame);
@@ -389,6 +392,9 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 		.finally(() => {
 			unsubscribe();
 		});
+		}
+
+		return true;
 	}
 
 	private parseFrame(frame: CanFrame): DeviceFrame {
