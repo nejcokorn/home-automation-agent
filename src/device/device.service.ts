@@ -16,7 +16,8 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 	private listeners = new Set<(event: DeviceFrame) => void>();
 	private timeout = {
 		command: 10,
-		config: 400,
+		config: 2500,
+		configSingle: 25,
 		grace: 70,
 		ping: 100,
 		discover: 100,
@@ -216,6 +217,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 	}
 
 	public async setConfig(options: { iface: string, deviceId: number, config: DeviceConfigDto[] }) {
+		await new ExtraPromise(async (resolve, reject) => {
 		for (let idxPort = 0; idxPort < options.config.length; idxPort++) {
 			let inputConfig = options.config[idxPort];
 			for (const configType in inputConfig) {
@@ -240,6 +242,10 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 				}
 			}
 		}
+			resolve(true);
+		})
+		.timeout(this.timeout.config)
+		.catch((error) => error);
 	}
 
 	private async sendConfig(options: { iface: string, deviceId: number, idxPort: number, configType: string, data: number }) {
@@ -279,7 +285,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 				data: buf
 			});
 		})
-		.timeout(this.timeout.config)
+		.timeout(this.timeout.configSingle)
 		.catch((error) => error)
 		.finally(() => unsubscribe());
 	}
