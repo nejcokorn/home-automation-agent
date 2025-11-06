@@ -33,18 +33,19 @@ export enum DataType {
 }
 
 export enum ConfigType {
-	ButtonRisingEdge = 0b00000,
-	ButtonFallingEdge = 0b00001,
-	Switch = 0b00010,
-	ActionToggle = 0b00011,
-	ActionHigh = 0b00100,
-	ActionLow = 0b00101,
-	Debounce = 0b00110,
-	Longpress = 0b00111,
-	LongpressDelayOff = 0b01000,
-	BypassInstantly = 0b01001,
-	BypassOnDIPSwitch = 0b01010,
-	BypassOnDisconnect = 0b01011
+	ButtonRisingEdge   = 0b00000,
+	ButtonFallingEdge  = 0b00001,
+	Switch             = 0b00010,
+	ActionReset        = 0b00011,
+	ActionToggle       = 0b00100,
+	ActionHigh         = 0b00101,
+	ActionLow          = 0b00110,
+	Debounce           = 0b00111,
+	Longpress          = 0b01000,
+	LongpressDelayOff  = 0b01001,
+	BypassInstantly    = 0b01010,
+	BypassOnDIPSwitch  = 0b01011,
+	BypassOnDisconnect = 0b01100
 }
 
 

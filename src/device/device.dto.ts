@@ -34,6 +34,11 @@ export class DeviceConfigDto {
 	@Max(1)
 	Switch: number;
 
+	@IsInt()
+	@Min(0)
+	@Max(1)
+	ActionReset: number;
+
 	@IsArray()
 	@ValidateNested({ each: true })
 	@Type(() => ActionDto)
