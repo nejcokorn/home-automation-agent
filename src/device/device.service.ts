@@ -305,7 +305,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 		for (let idxPort = 0; idxPort < 16; idxPort++) {
 			let inputConfig = {};
 			for (let configIdx = 0; configIdx < configNames.length; configIdx++){
-				if (configNames[configIdx] == "Reset") {
+				if (configNames[configIdx] == "ActionReset") {
 					continue;
 				}
 				let unsubscribe: Unsubscribe = () => {};

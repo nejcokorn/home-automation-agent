@@ -1,4 +1,4 @@
-import { IsDefined, IsArray, IsInt, Max, Min, ValidateNested, ArrayMaxSize, IsBoolean } from 'class-validator';
+import { IsOptional, IsDefined, IsArray, IsInt, Max, Min, ValidateNested, ArrayMaxSize, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class ActionDto {
@@ -34,10 +34,11 @@ export class DeviceConfigDto {
 	@Max(1)
 	Switch: number;
 
+	@IsOptional()
 	@IsInt()
 	@Min(0)
 	@Max(1)
-	ActionReset: number;
+	ActionReset?: number;
 
 	@IsArray()
 	@ValidateNested({ each: true })
