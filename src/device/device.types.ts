@@ -42,7 +42,7 @@ export enum ConfigType {
 	ActionLow          = 0b00110,
 	Debounce           = 0b00111,
 	Longpress          = 0b01000,
-	LongpressDelayOff  = 0b01001,
+	LongpressDelayLow  = 0b01001,
 	BypassInstantly    = 0b01010,
 	BypassOnDIPSwitch  = 0b01011,
 	BypassOnDisconnect = 0b01100

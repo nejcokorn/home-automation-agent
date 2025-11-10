@@ -96,18 +96,18 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 		});
 	}
 
-	public async writePort(options: { iface: string, deviceId: number, signalType: string, direction: string, portId: number, toggle: Boolean, state: number, delayOff: number }) {
+	public async writePort(options: { iface: string, deviceId: number, signalType: string, direction: string, portId: number, toggle: Boolean, state: number, delayLow: number }) {
 		let unsubscribe: Unsubscribe = () => {};
 		
 		return await new ExtraPromise((resolve, reject) => {
-			let data = options.delayOff ? options.delayOff : options.state;
+			let data = options.delayLow ? options.delayLow : options.state;
 			let buf : Buffer = Buffer.alloc(8);
 			let commControl : number = CommControl.Command;
 			let dataCtrl : number =
 				(options.toggle ? OperationType.Toggle : OperationType.Write) << 4
 				| (options.signalType == "analog" ? DataControl.Analog : DataControl.Empty)
 				| (options.direction == "input" ? DataControl.Input : DataControl.Empty)
-				| (options.delayOff > 0 ? DataType.Int : DataControl.Empty);
+				| (options.delayLow > 0 ? DataType.Int : DataControl.Empty);
 			buf[0] = this.canAddresses.readPort;
 			buf[1] = commControl;
 			buf[2] = dataCtrl;

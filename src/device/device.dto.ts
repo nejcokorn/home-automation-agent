@@ -71,7 +71,7 @@ export class DeviceConfigDto {
 	@IsInt()
 	@Min(0)
 	@Max(16777215)
-	LongpressDelayOff: number;
+	LongpressDelayLow: number;
 
 	// Bypass flag
 	@IsInt()
@@ -104,10 +104,10 @@ export class DeviceCommandDto {
 	@Type(() => Number)
 	state: number;
 
-	@IsInt({ message: 'delayOff must be an integer' })
+	@IsInt({ message: 'delayLow must be an integer' })
 	@Min(0) @Max(16777215)
 	@IsDefined()
 	@Type(() => Number)
-	delayOff: number;
+	delayLow: number;
 
 }
