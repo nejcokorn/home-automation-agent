@@ -366,39 +366,34 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 	public async writeEEPROM(iface: string, deviceId: number) {
 		let unsubscribe: Unsubscribe = () => {};
 		
-		// TODO 16 should not be hardcoded
-		for (let idxPort = 0; idxPort < 16; idxPort++) {
-			await new ExtraPromise((resolve, reject) => {
-				let buf : Buffer = Buffer.alloc(8);
-				let commControl : number = CommControl.Command;
-				let dataCtrl : number = DataControl.Config | DataControl.WriteEEPROM;
-				buf[0] = this.canAddresses.writeEEPROM;
-				buf[1] = commControl;
-				buf[2] = dataCtrl;
-				buf[7] = idxPort;
-	
-				unsubscribe = this.can.subscribe((frame: CanFrame) => {
-					let payload = this.parseFrame(frame);
-					if (payload.to == this.canAddresses.writeEEPROM
-						&& payload.commControl.isCommand == true
-						&& payload.commControl.isAcknowledge == true
-						&& payload.dataCtrl.isWriteEEPROM == true
-					) {
-						console.log(`EEPROM for input ${idxPort} configuration port updated`);
-						resolve(true);
-					}
-				});
-				
-				this.can.send(iface, {
-					id: deviceId,
-					data: buf
-				});
-			})
-			.timeout(this.timeout.EEPROM)
-			.finally(() => {
-				unsubscribe();
+		await new ExtraPromise((resolve, reject) => {
+			let buf : Buffer = Buffer.alloc(8);
+			let commControl : number = CommControl.Command;
+			let dataCtrl : number = DataControl.Config | DataControl.WriteEEPROM;
+			buf[0] = this.canAddresses.writeEEPROM;
+			buf[1] = commControl;
+			buf[2] = dataCtrl;
+
+			unsubscribe = this.can.subscribe((frame: CanFrame) => {
+				let payload = this.parseFrame(frame);
+				if (payload.to == this.canAddresses.writeEEPROM
+					&& payload.commControl.isCommand == true
+					&& payload.commControl.isAcknowledge == true
+					&& payload.dataCtrl.isWriteEEPROM == true
+				) {
+					resolve(true);
+				}
 			});
-		}
+			
+			this.can.send(iface, {
+				id: deviceId,
+				data: buf
+			});
+		})
+		.timeout(this.timeout.EEPROM)
+		.finally(() => {
+			unsubscribe();
+		});
 
 		return true;
 	}
