@@ -1,11 +1,15 @@
-import { IsOptional, IsDefined, IsArray, IsInt, Max, Min, ValidateNested, ArrayMaxSize, IsBoolean } from 'class-validator';
+import { IsOptional, IsDefined, IsArray, IsInt, IsEnum, IsBoolean, Max, Min, ValidateNested, ArrayMaxSize } from 'class-validator';
 import { Type } from 'class-transformer';
+import { ActionType } from 'src/device/device.types';
 
 export class ActionDto {
 	@IsInt()
 	@Min(0)
 	@Max(255)
 	deviceId: number;
+
+	@IsEnum(ActionType)
+	type: ActionType;
 
 	@IsArray()
 	@ArrayMaxSize(12)
@@ -41,19 +45,10 @@ export class DeviceConfigDto {
 	ActionReset?: number;
 
 	@IsArray()
+	@ArrayMaxSize(196)
 	@ValidateNested({ each: true })
 	@Type(() => ActionDto)
-	ActionToggle: ActionDto[];
-
-	@IsArray()
-	@ValidateNested({ each: true })
-	@Type(() => ActionDto)
-	ActionHigh: ActionDto[];
-
-	@IsArray()
-	@ValidateNested({ each: true })
-	@Type(() => ActionDto)
-	ActionLow: ActionDto[];
+	Actions: ActionDto[];
 
 	// Number in microseconds
 	@IsInt()

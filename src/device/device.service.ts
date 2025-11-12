@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from "@nestjs/common";
 import { CanFrame } from "src/can/can.types";
-import { CommControl, DataControl, ConfigType, DataType, DeviceFrame, OperationType } from "src/device/device.types";
+import { CommControl, DataControl, ConfigType, DataType, DeviceFrame, OperationType, ActionType } from "src/device/device.types";
 import { LoggerExtra } from "src/extras/logger.extra";
 import { ExtraPromise } from "src/extras/promise.extra";
 import { CanService } from "src/can/can.service";
@@ -228,12 +228,12 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 				for (const configType in inputConfig) {
 					const value = inputConfig[configType];
 
-					if (["ActionToggle", "ActionHigh", "ActionLow"].includes(configType)) {
+					if (configType == "Actions") {
 						for (const action of inputConfig[configType]) {
 							let data = action.deviceId << 16 | this.portsToHex(action.ports);
 							await this.sendConfig({
 								...options, idxPort,
-								configType,
+								configType: action.type == ActionType.TOGGLE ? "ActionToggle" : action.type == ActionType.HIGH ? "ActionHigh" : "ActionLow",
 								data: data
 							});
 						}
@@ -305,7 +305,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 		for (let idxPort = 0; idxPort < 16; idxPort++) {
 			let inputConfig = {};
 			for (let configIdx = 0; configIdx < configNames.length; configIdx++){
-				if (configNames[configIdx] == "ActionReset") {
+				if (["ActionReset", "ActionToggle", "ActionHigh", "ActionLow"].includes(configNames[configIdx])) {
 					continue;
 				}
 				let unsubscribe: Unsubscribe = () => {};
@@ -328,18 +328,22 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 							&& payload.commControl.isAcknowledge == true
 							&& payload.dataCtrl.isConfig == true
 							&& payload.dataCtrl.isInput
-							&& payload.configCtrl == Number(configValues[configIdx])
+							&& (payload.configCtrl == Number(configValues[configIdx]) || [ConfigType.ActionHigh, ConfigType.ActionLow, ConfigType.ActionToggle].includes(payload.configCtrl) && configNames[configIdx] == "Actions")
 						) {
-							if (["ActionToggle", "ActionHigh", "ActionLow"].includes(configNames[configIdx])) {
-								let deviceId = payload.data >> 16;
-								if (deviceId != 0xFF) {
-									actionData.push({
-										deviceId,
-										ports: this.hexToPorts(payload.data & 0xFFFF)
-									})
-								}
-								if (!payload.commControl.isWait) {
-									resolve(actionData);
+							if (configNames[configIdx] == "Actions") {
+								if (payload.configCtrl == Number(configValues[configIdx])) {
+									if (!payload.commControl.isWait) {
+										resolve(actionData);
+									}
+								} else {
+									let deviceId = payload.data >> 16;
+									if (deviceId != 0xFF) {
+										actionData.push({
+											deviceId,
+											type: payload.configCtrl == ConfigType.ActionToggle ? ActionType.TOGGLE : payload.configCtrl == ConfigType.ActionHigh ? ActionType.HIGH : ActionType.LOW,
+											ports: this.hexToPorts(payload.data & 0xFFFF)
+										})
+									}
 								}
 							} else {
 								resolve(payload.data);
