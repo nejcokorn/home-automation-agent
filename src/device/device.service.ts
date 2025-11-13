@@ -221,14 +221,19 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 			for (let idxPort = 0; idxPort < options.config.length; idxPort++) {
 				let inputConfig = options.config[idxPort];
 
-				// Reset all action configurations before setting new actions
-				inputConfig.ActionReset = 1;
-
 				// Loop through the actions
 				for (const configType in inputConfig) {
 					const value = inputConfig[configType];
 
 					if (configType == "Actions") {
+						// Remove all actions before inserting new set of actions
+						await this.sendConfig({
+							...options, idxPort,
+							configType: "Actions", 
+							data: 0
+						});
+
+						// Loop thorugh set of actions
 						for (const action of inputConfig[configType]) {
 							let data = action.deviceId << 16 | this.portsToHex(action.ports);
 							await this.sendConfig({
@@ -305,7 +310,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 		for (let idxPort = 0; idxPort < 16; idxPort++) {
 			let inputConfig = {};
 			for (let configIdx = 0; configIdx < configNames.length; configIdx++){
-				if (["ActionReset", "ActionToggle", "ActionHigh", "ActionLow"].includes(configNames[configIdx])) {
+				if (["ActionToggle", "ActionHigh", "ActionLow"].includes(configNames[configIdx])) {
 					continue;
 				}
 				let unsubscribe: Unsubscribe = () => {};

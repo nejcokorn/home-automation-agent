@@ -38,12 +38,6 @@ export class DeviceConfigDto {
 	@Max(1)
 	Switch: number;
 
-	@IsOptional()
-	@IsInt()
-	@Min(0)
-	@Max(1)
-	ActionReset?: number;
-
 	@IsArray()
 	@ArrayMaxSize(196)
 	@ValidateNested({ each: true })
