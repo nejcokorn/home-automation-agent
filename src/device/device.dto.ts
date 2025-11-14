@@ -1,6 +1,6 @@
 import { IsOptional, IsDefined, IsArray, IsInt, IsEnum, IsBoolean, Max, Min, ValidateNested, ArrayMaxSize } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ActionType } from 'src/device/device.types';
+import { ActionType, ActionMode } from 'src/device/device.types';
 
 export class ActionDto {
 	@IsInt()
@@ -11,12 +11,19 @@ export class ActionDto {
 	@IsEnum(ActionType)
 	type: ActionType;
 
+	@IsEnum(ActionMode)
+	@IsOptional()
+	mode: ActionMode = ActionMode.NORMAL;
+
 	@IsArray()
 	@ArrayMaxSize(12)
 	@IsInt({ each: true })
 	@Min(0, { each: true })
 	@Max(11, { each: true })
 	ports: number[];
+
+	@IsOptional()
+	delay: number = 0;
 }
 
 export class DeviceConfigDto {
@@ -24,61 +31,61 @@ export class DeviceConfigDto {
 	@IsInt()
 	@Min(0)
 	@Max(1)
-	ButtonRisingEdge: number;
+	buttonRisingEdge: number;
 
 	// Button press states (e.g., 0/1)
 	@IsInt()
 	@Min(0)
 	@Max(1)
-	ButtonFallingEdge: number;
+	buttonFallingEdge: number;
 
 	// Switch state (e.g., 0/1)
 	@IsInt()
 	@Min(0)
 	@Max(1)
-	Switch: number;
-
-	@IsArray()
-	@ArrayMaxSize(196)
-	@ValidateNested({ each: true })
-	@Type(() => ActionDto)
-	Actions: ActionDto[];
+	switch: number;
 
 	// Number in microseconds
 	@IsInt()
 	@Min(0)
 	@Max(16777215)
-	Debounce: number;
+	debounce: number;
 
 	// Number in milliseconds
 	@IsInt()
 	@Min(0)
 	@Max(16777215)
-	Longpress: number;
+	longpress: number;
 
 	// Number in milliseconds
 	@IsInt()
 	@Min(0)
 	@Max(16777215)
-	LongpressDelayLow: number;
+	doubleclick: number;
+
+	@IsArray()
+	@ArrayMaxSize(196)
+	@ValidateNested({ each: true })
+	@Type(() => ActionDto)
+	actions: ActionDto[];
 
 	// Bypass flag
 	@IsInt()
 	@Min(0)
 	@Max(1)
-	BypassInstantly: number;
+	bypassInstantly: number;
 
 	// Bypass flag
 	@IsInt()
 	@Min(0)
 	@Max(1)
-	BypassOnDIPSwitch: number;
+	bypassOnDIPSwitch: number;
 
 	// Number in milliseconds
 	@IsInt()
 	@Min(0)
 	@Max(16777215)
-	BypassOnDisconnect: number;
+	bypassOnDisconnect: number;
 }
 
 export class DeviceCommandDto {

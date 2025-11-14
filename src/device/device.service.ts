@@ -1,12 +1,40 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from "@nestjs/common";
 import { CanFrame } from "src/can/can.types";
-import { CommControl, DataControl, ConfigType, DataType, DeviceFrame, OperationType, ActionType } from "src/device/device.types";
+import { CommControl, DataControl, ConfigType, DataType, DeviceFrame, OperationType, ActionType, ActionMode } from "src/device/device.types";
 import { LoggerExtra } from "src/extras/logger.extra";
 import { ExtraPromise } from "src/extras/promise.extra";
 import { CanService } from "src/can/can.service";
 import { DeviceConfigDto, ActionDto } from "./device.dto";
 
 type Unsubscribe = () => void;
+
+// Gropu of general configuratino to read from
+const generalConfigs = [
+	ConfigType.buttonRisingEdge,
+	ConfigType.buttonFallingEdge,
+	ConfigType.switch,
+	ConfigType.debounce,
+	ConfigType.longpress,
+	ConfigType.doubleclick,
+	ConfigType.actions,
+	ConfigType.bypassInstantly,
+	ConfigType.bypassOnDIPSwitch,
+	ConfigType.bypassOnDisconnect,
+]
+
+// Group of action configurations
+const actionConfigs = [
+	ConfigType.delay,
+	ConfigType.actionToggle,
+	ConfigType.actionHigh,
+	ConfigType.actionLow,
+	ConfigType.actionLongToggle,
+	ConfigType.actionLongHigh,
+	ConfigType.actionLongLow,
+	ConfigType.actionDoubleToggle,
+	ConfigType.actionDoubleHigh,
+	ConfigType.actionDoubleLow
+]
 
 @Injectable()
 export class DeviceService implements OnModuleInit, OnModuleDestroy {
@@ -16,7 +44,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 	private listeners = new Set<(event: DeviceFrame) => void>();
 	private timeout = {
 		command: 10,
-		config: 2500,
+		config: 5000,
 		configSingle: 25,
 		grace: 70,
 		ping: 100,
@@ -225,22 +253,55 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 				for (const configType in inputConfig) {
 					const value = inputConfig[configType];
 
-					if (configType == "Actions") {
+					if (configType == ConfigType[ConfigType.actions]) {
 						// Remove all actions before inserting new set of actions
 						await this.sendConfig({
 							...options, idxPort,
-							configType: "Actions", 
+							configType: ConfigType[ConfigType.actions], 
 							data: 0
 						});
 
 						// Loop thorugh set of actions
 						for (const action of inputConfig[configType]) {
 							let data = action.deviceId << 16 | this.portsToHex(action.ports);
+							let configType;
+							switch (action.mode) {
+								case ActionMode.NORMAL:
+									switch (action.type) {
+										case ActionType.LOW: configType = ConfigType[ConfigType.actionLow]; break;
+										case ActionType.HIGH: configType = ConfigType[ConfigType.actionHigh]; break;
+										case ActionType.TOGGLE: configType = ConfigType[ConfigType.actionToggle]; break;
+									}
+									break;
+								case ActionMode.LONGPRESS:
+									switch (action.type) {
+										case ActionType.LOW: configType = ConfigType[ConfigType.actionLongLow]; break;
+										case ActionType.HIGH: configType = ConfigType[ConfigType.actionLongHigh]; break;
+										case ActionType.TOGGLE: configType = ConfigType[ConfigType.actionLongToggle]; break;
+									}
+									break;
+								case ActionMode.DOUBLECLICK:
+									switch (action.type) {
+										case ActionType.LOW: configType = ConfigType[ConfigType.actionDoubleLow]; break;
+										case ActionType.HIGH: configType = ConfigType[ConfigType.actionDoubleHigh]; break;
+										case ActionType.TOGGLE: configType = ConfigType[ConfigType.actionDoubleToggle]; break;
+									}
+									break;
+							}
 							await this.sendConfig({
 								...options, idxPort,
-								configType: action.type == ActionType.TOGGLE ? "ActionToggle" : action.type == ActionType.HIGH ? "ActionHigh" : "ActionLow",
+								configType: configType,
 								data: data
 							});
+
+							// Only send delay if not equal 0
+							if (action.delay != 0) {
+								await this.sendConfig({
+									...options, idxPort,
+									configType: ConfigType[ConfigType.delay],
+									data: action.delay
+								});
+							}
 						}
 					} else {
 						await this.sendConfig({
@@ -301,18 +362,12 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 	}
 
 	public async getConfig(options: { iface: string, deviceId: number }) {
-		// Extract Keys and values from ConfigType
-		const configNames = Object.keys(ConfigType).filter(k => isNaN(Number(k)));
-		const configValues = Object.values(ConfigType).filter(v => typeof v === "number") as number[];
-
+		// Initialize configuration object
 		let deviceConfig: any = [];
 		
 		for (let idxPort = 0; idxPort < 16; idxPort++) {
 			let inputConfig = {};
-			for (let configIdx = 0; configIdx < configNames.length; configIdx++){
-				if (["ActionToggle", "ActionHigh", "ActionLow"].includes(configNames[configIdx])) {
-					continue;
-				}
+			for (let config of generalConfigs) {
 				let unsubscribe: Unsubscribe = () => {};
 				let configValue = await new ExtraPromise<number | ActionDto[]>((resolve, reject) => {
 					// Construct config for each input port
@@ -320,11 +375,12 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 					let dataCtrl : number = DataControl.Config | DataControl.Input; // !DataControl.Write
 					let buf : Buffer = Buffer.alloc(8);
 					let actionData: ActionDto[] = [];
+					let lastAction: ActionDto;
 					buf[0] = this.canAddresses.readConfig;
 					buf[1] = commControl;
 					buf[2] = dataCtrl;
 					buf[3] = idxPort;
-					buf[4] = Number(configValues[configIdx]);
+					buf[4] = config;
 
 					unsubscribe = this.can.subscribe((frame: CanFrame) => {
 						let payload = this.parseFrame(frame);
@@ -333,25 +389,51 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 							&& payload.commControl.isAcknowledge == true
 							&& payload.dataCtrl.isConfig == true
 							&& payload.dataCtrl.isInput
-							&& (payload.configCtrl == Number(configValues[configIdx]) || [ConfigType.ActionHigh, ConfigType.ActionLow, ConfigType.ActionToggle].includes(payload.configCtrl) && configNames[configIdx] == "Actions")
+							&& (payload.configCtrl == config || actionConfigs.includes(payload.configCtrl) && config == ConfigType.actions)
 						) {
-							if (configNames[configIdx] == "Actions") {
-								if (payload.configCtrl == Number(configValues[configIdx])) {
+							if (config == ConfigType.actions) {
+								// This will indicate last action from device
+								if (payload.configCtrl == ConfigType.actions) {
+									// Another check indicating no more actions
+									if (!payload.commControl.isWait) {
+										resolve(actionData);
+									}
+								} else if(payload.configCtrl == ConfigType.delay) {
+									lastAction.delay = payload.data;
+									console.log(lastAction, payload.data);
+									
 									if (!payload.commControl.isWait) {
 										resolve(actionData);
 									}
 								} else {
+									let type;
+									let mode;
+									switch (payload.configCtrl) {
+										case ConfigType.actionLow:          mode = ActionMode.NORMAL;      type = ActionType.LOW; break;
+										case ConfigType.actionHigh:         mode = ActionMode.NORMAL;      type = ActionType.HIGH; break;
+										case ConfigType.actionToggle:       mode = ActionMode.NORMAL;      type = ActionType.TOGGLE; break;
+										case ConfigType.actionLongLow:      mode = ActionMode.LONGPRESS;   type = ActionType.LOW; break;
+										case ConfigType.actionLongHigh:     mode = ActionMode.LONGPRESS;   type = ActionType.HIGH; break;
+										case ConfigType.actionLongToggle:   mode = ActionMode.LONGPRESS;   type = ActionType.TOGGLE; break;
+										case ConfigType.actionDoubleLow:    mode = ActionMode.DOUBLECLICK; type = ActionType.LOW; break;
+										case ConfigType.actionDoubleHigh:   mode = ActionMode.DOUBLECLICK; type = ActionType.HIGH; break;
+										case ConfigType.actionDoubleToggle: mode = ActionMode.DOUBLECLICK; type = ActionType.TOGGLE; break;
+									}
+
 									let deviceId = payload.data >> 16;
 									if (deviceId != 0xFF) {
-										actionData.push({
+										lastAction = {
 											deviceId,
-											type: payload.configCtrl == ConfigType.ActionToggle ? ActionType.TOGGLE : payload.configCtrl == ConfigType.ActionHigh ? ActionType.HIGH : ActionType.LOW,
-											ports: this.hexToPorts(payload.data & 0xFFFF)
-										})
+											mode,
+											type,
+											ports: this.hexToPorts(payload.data & 0xFFFF),
+											delay: 0
+										}
+										actionData.push(lastAction);
 									}
 								}
 							} else {
-								resolve(payload.data);
+								return resolve(payload.data);
 							}
 						}
 					});
@@ -365,7 +447,8 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 				.finally(() => {
 					unsubscribe();
 				});
-				inputConfig[configNames[configIdx]] = configValue;
+				// Set configuration parameter
+				inputConfig[ConfigType[config]] = configValue;
 			}
 			deviceConfig.push(inputConfig);
 		}
