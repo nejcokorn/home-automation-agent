@@ -10,20 +10,25 @@ export const CommControl = {
 
 export const DataControl = {
 	Empty: 0x00,
-	Config: 0x80,
-	WriteEEPROM: 0x40,
-	Operation: 0x30,
+	Operation: 0x70,
 	Analog: 0x08,
 	Input: 0x04,
 	DataType: 0x03,
+	// Type specific
+	TypeRead: 0x00,
+	TypeWrite: 0x10,
+	TypeToggle: 0x20,
 };
 
-export enum OperationType {
-	Read     = 0b00, // Read = 0b00
-	Write    = 0b01, // Write = 0b01
-	Toggle   = 0b10, // Toggle = 0b10
-	Reserved = 0b11, // Reserved = 0b11
-}
+export const ConfigControl = {
+	Empty: 0x00,
+	Config: 0x80,
+	Operation: 0x40,
+	Options: 0x3F,
+	// Type specific
+	TypeWrite: 0x40,
+	TypeRead: 0x00,
+};
 
 export enum DataType {
 	Bit   = 0b00,
@@ -45,26 +50,27 @@ export enum ActionMode {
 }
 
 export enum ConfigType {
-	buttonRisingEdge   = 0b00000,
-	buttonFallingEdge  = 0b00001,
-	switch             = 0b00010,
-	debounce           = 0b00011,
-	longpress          = 0b00100,
-	doubleclick        = 0b00101,
-	delay              = 0b00110,
-	actions            = 0b00111,
-	actionToggle       = 0b01000,
-	actionHigh         = 0b01001,
-	actionLow          = 0b01010,
-	actionLongToggle   = 0b01011,
-	actionLongHigh     = 0b01100,
-	actionLongLow      = 0b01101,
-	actionDoubleToggle = 0b01110,
-	actionDoubleHigh   = 0b01111,
-	actionDoubleLow    = 0b10000,
-	bypassInstantly    = 0b10001,
-	bypassOnDIPSwitch  = 0b10010,
-	bypassOnDisconnect = 0b10011
+	writeEEPROM        = 0b00000,
+	buttonRisingEdge   = 0b00001,
+	buttonFallingEdge  = 0b00010,
+	switch             = 0b00011,
+	debounce           = 0b00100,
+	longpress          = 0b00101,
+	doubleclick        = 0b00110,
+	delay              = 0b00111,
+	actions            = 0b01000,
+	actionToggle       = 0b01001,
+	actionHigh         = 0b01010,
+	actionLow          = 0b01011,
+	actionLongToggle   = 0b01100,
+	actionLongHigh     = 0b01101,
+	actionLongLow      = 0b01110,
+	actionDoubleToggle = 0b01111,
+	actionDoubleHigh   = 0b10000,
+	actionDoubleLow    = 0b10001,
+	bypassInstantly    = 0b10010,
+	bypassOnDIPSwitch  = 0b10011,
+	bypassOnDisconnect = 0b10100
 }
 
 
@@ -80,8 +86,6 @@ export type DeviceFrame = {
 		isError: boolean;
 	};
 	dataCtrl: {
-		isConfig: boolean;
-		isWriteEEPROM: boolean;
 		isRead: boolean;
 		isWrite: boolean;
 		isToggle: boolean;
@@ -89,7 +93,12 @@ export type DeviceFrame = {
 		isInput: boolean;
 		dataType: DataType;
 	};
-	configCtrl: ConfigType;
+	configCtrl: {
+		isConfig: boolean;
+		isRead: boolean;
+		isWrite: boolean;
+		option: ConfigType;
+	}
 	port: number;
 	data: number;
 }

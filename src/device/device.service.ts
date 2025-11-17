@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from "@nestjs/common";
 import { CanFrame } from "src/can/can.types";
-import { CommControl, DataControl, ConfigType, DataType, DeviceFrame, OperationType, ActionType, ActionMode } from "src/device/device.types";
+import { CommControl, DataControl, ConfigControl, ConfigType, DataType, DeviceFrame, ActionType, ActionMode } from "src/device/device.types";
 import { LoggerExtra } from "src/extras/logger.extra";
 import { ExtraPromise } from "src/extras/promise.extra";
 import { CanService } from "src/can/can.service";
@@ -132,7 +132,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 			let buf : Buffer = Buffer.alloc(8);
 			let commControl : number = CommControl.Command;
 			let dataCtrl : number =
-				(options.toggle ? OperationType.Toggle : OperationType.Write) << 4
+				(options.toggle ? DataControl.TypeToggle : DataControl.TypeWrite)
 				| (options.signalType == "analog" ? DataControl.Analog : DataControl.Empty)
 				| (options.direction == "input" ? DataControl.Input : DataControl.Empty)
 				| (options.delayLow > 0 ? DataType.Int : DataControl.Empty);
@@ -324,13 +324,12 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 		await new ExtraPromise((resolve, reject) => {
 			// Construct buffer
 			let commControl: number = CommControl.Command;
-			let dataCtrl: number = DataControl.Config | DataControl.Input | (OperationType.Write << 4);
+			let configCtrl: number =  ConfigControl.Config | ConfigControl.TypeWrite | ConfigType[options.configType];
 			let buf: Buffer = Buffer.alloc(8);
 			buf[0] = this.canAddresses.writeConfig;
 			buf[1] = commControl;
-			buf[2] = dataCtrl;
+			buf[2] = configCtrl;
 			buf[3] = options.idxPort;
-			buf[4] = ConfigType[options.configType];
 			Buffer.from([options.data >> 16, options.data >> 8, options.data]).copy(buf, 5);
 
 			// Subscribe for ACK
@@ -341,10 +340,9 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 					payload.from == options.deviceId &&
 					payload.commControl.isCommand == true &&
 					payload.commControl.isAcknowledge == true &&
-					payload.dataCtrl.isConfig == true &&
-					payload.dataCtrl.isInput == true &&
-					payload.dataCtrl.isWrite == true &&
-					payload.configCtrl == ConfigType[options.configType]
+					payload.configCtrl.isConfig == true &&
+					payload.configCtrl.isWrite == true &&
+					payload.configCtrl.option == ConfigType[options.configType]
 				) {
 					resolve(payload);
 				}
@@ -372,33 +370,33 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 				let configValue = await new ExtraPromise<number | ActionDto[]>((resolve, reject) => {
 					// Construct config for each input port
 					let commControl : number = CommControl.Command;
-					let dataCtrl : number = DataControl.Config | DataControl.Input; // !DataControl.Write
+					let configCtrl : number = ConfigControl.Config | ConfigControl.TypeRead | config;
 					let buf : Buffer = Buffer.alloc(8);
-					let actionData: ActionDto[] = [];
-					let lastAction: ActionDto;
 					buf[0] = this.canAddresses.readConfig;
 					buf[1] = commControl;
-					buf[2] = dataCtrl;
+					buf[2] = configCtrl;
 					buf[3] = idxPort;
-					buf[4] = config;
 
-					unsubscribe = this.can.subscribe((frame: CanFrame) => {
+					// Config data retrived from device
+					let actionData: ActionDto[] = [];
+					let lastAction: ActionDto;
+
+					unsubscribe = this.can.subscribe((frame: CanFrame) => { 
 						let payload = this.parseFrame(frame);
 						if (payload.to == this.canAddresses.readConfig
 							&& payload.commControl.isCommand == true
 							&& payload.commControl.isAcknowledge == true
-							&& payload.dataCtrl.isConfig == true
-							&& payload.dataCtrl.isInput
-							&& (payload.configCtrl == config || actionConfigs.includes(payload.configCtrl) && config == ConfigType.actions)
+							&& payload.configCtrl.isConfig == true
+							&& (payload.configCtrl.option == config || actionConfigs.includes(payload.configCtrl.option) && config == ConfigType.actions)
 						) {
 							if (config == ConfigType.actions) {
 								// This will indicate last action from device
-								if (payload.configCtrl == ConfigType.actions) {
+								if (payload.configCtrl.option == ConfigType.actions) {
 									// Another check indicating no more actions
 									if (!payload.commControl.isWait) {
 										resolve(actionData);
 									}
-								} else if(payload.configCtrl == ConfigType.delay) {
+								} else if(payload.configCtrl.option == ConfigType.delay) {
 									lastAction.delay = payload.data;
 									console.log(lastAction, payload.data);
 									
@@ -408,7 +406,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 								} else {
 									let type;
 									let mode;
-									switch (payload.configCtrl) {
+									switch (payload.configCtrl.option) {
 										case ConfigType.actionLow:          mode = ActionMode.NORMAL;      type = ActionType.LOW; break;
 										case ConfigType.actionHigh:         mode = ActionMode.NORMAL;      type = ActionType.HIGH; break;
 										case ConfigType.actionToggle:       mode = ActionMode.NORMAL;      type = ActionType.TOGGLE; break;
@@ -461,17 +459,18 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 		await new ExtraPromise((resolve, reject) => {
 			let buf : Buffer = Buffer.alloc(8);
 			let commControl : number = CommControl.Command;
-			let dataCtrl : number = DataControl.Config | DataControl.WriteEEPROM;
+			let configCtrl : number = ConfigControl.Config | ConfigControl.TypeWrite;
 			buf[0] = this.canAddresses.writeEEPROM;
 			buf[1] = commControl;
-			buf[2] = dataCtrl;
+			buf[2] = configCtrl;
 
 			unsubscribe = this.can.subscribe((frame: CanFrame) => {
 				let payload = this.parseFrame(frame);
 				if (payload.to == this.canAddresses.writeEEPROM
 					&& payload.commControl.isCommand == true
 					&& payload.commControl.isAcknowledge == true
-					&& payload.dataCtrl.isWriteEEPROM == true
+					&& payload.configCtrl.isWrite == true
+					&& payload.configCtrl.option == ConfigType.writeEEPROM
 				) {
 					resolve(true);
 				}
@@ -491,9 +490,6 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 	}
 
 	private parseFrame(frame: CanFrame): DeviceFrame {
-		let configCtrl : any = null;
-		let data : any = null;
-
 		let to = frame.id;
 		let from = frame.data[0];
 		let commControl = {
@@ -505,29 +501,25 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 			isError: frame.data[1] & CommControl.Error ? true : false
 		};
 		let dataCtrl = {
-			isConfig : frame.data[2] & DataControl.Config ? true : false,
-			isWriteEEPROM : frame.data[2] & DataControl.WriteEEPROM ? true : false,
-			isRead : (frame.data[2] & DataControl.Operation) >> 4 == OperationType.Read ? true : false,
-			isWrite : (frame.data[2] & DataControl.Operation) >> 4 == OperationType.Write ? true : false,
-			isToggle : (frame.data[2] & DataControl.Operation) >> 4 == OperationType.Toggle ? true : false,
+			isRead : (frame.data[2] & DataControl.Operation) == DataControl.TypeRead ? true : false,
+			isWrite : (frame.data[2] & DataControl.Operation) == DataControl.TypeWrite ? true : false,
+			isToggle : (frame.data[2] & DataControl.Operation) == DataControl.TypeToggle ? true : false,
 			isAnalog : frame.data[2] & DataControl.Analog ? true : false,
 			isInput : frame.data[2] & DataControl.Input ? true : false,
-			dataType : (frame.data[2] & DataControl.DataType),
+			dataType : frame.data[2] & DataControl.DataType,
+		};
+		let configCtrl = {
+			isConfig : frame.data[2] & ConfigControl.Config ? true : false,
+			isRead : frame.data[2] & ConfigControl.Operation ? false : true,
+			isWrite : frame.data[2] & ConfigControl.Operation ? true : false,
+			option : frame.data[2] & ConfigControl.Options
 		};
 		let port = frame.data[3];
-		if (dataCtrl.isConfig) {
-			configCtrl = frame.data[4];
-			data =
+		let data = (frame.data[4] << 24) |
 				(frame.data[5] << 16) |
 				(frame.data[6] << 8) |
 				frame.data[7];
-		} else {
-			data =
-				(frame.data[4] << 24) |
-				(frame.data[5] << 16) |
-				(frame.data[6] << 8) |
-				frame.data[7];
-		}
+		
 		return {
 			to,
 			from,

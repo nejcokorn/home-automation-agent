@@ -100,10 +100,10 @@ export class DeviceCommandDto {
 	@Type(() => Number)
 	state: number;
 
-	@IsInt({ message: 'delayLow must be an integer' })
+	@IsInt({ message: 'delay must be an integer' })
 	@Min(0) @Max(16777215)
 	@IsDefined()
 	@Type(() => Number)
-	delayLow: number;
+	delay: number;
 
 }

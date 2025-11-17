@@ -138,7 +138,7 @@ export class DeviceController {
 			portId,
 			toggle: payload.toggle,
 			state: payload.state,
-			delayLow: payload.delayLow
+			delayLow: payload.delay
 		});
 
 		// Read from device port
