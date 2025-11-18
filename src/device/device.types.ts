@@ -1,33 +1,43 @@
-export const CommControl = {
-	Empty: 0x00,
-	Command: 0x80,
-	Discovery: 0x40,
-	Ping: 0x20,
-	ACK: 0x10,
-	Wait: 0x08,
-	Error: 0x04,
+export enum CommControl {
+	empty          = 0x00,
+	commandBit     = 0x80,
+	discoveryBit   = 0x40,
+	pingBit        = 0x20,
+	acknowledgeBit = 0x10,
+	waitBit        = 0x08,
+	errorBit       = 0x04,
 };
 
-export const DataControl = {
-	Empty: 0x00,
-	Operation: 0x70,
-	Analog: 0x08,
-	Input: 0x04,
-	DataType: 0x03,
-	// Type specific
-	TypeRead: 0x00,
-	TypeWrite: 0x10,
-	TypeToggle: 0x20,
+export enum DataControl {
+	empty         = 0x00,
+	operationBits = 0x70,
+	signalBit     = 0x08,
+	directionBit  = 0x04,
+	dataTypeBits  = 0x03,
+	// Specific Types
+	read          = 0x00,
+	write         = 0x10,
+	extra         = 0x20,
+	delay         = 0x30,
+	listDelays    = 0x40,
+	digital       = 0x00,
+	analog        = 0x08,
+	input         = 0x04,
+	output        = 0x00,
+	bit           = 0x00,
+	byte          = 0x01,
+	integer       = 0x02,
+	decimal       = 0x03,
 };
 
-export const ConfigControl = {
-	Empty: 0x00,
-	Config: 0x80,
-	Operation: 0x40,
-	Options: 0x3F,
-	// Type specific
-	TypeWrite: 0x40,
-	TypeRead: 0x00,
+export enum ConfigControl {
+	empty        = 0x00,
+	configBit    = 0x80,
+	operationBit = 0x40,
+	optionBits   = 0x3F,
+	// Specific Types
+	write        = 0x40,
+	read         = 0x00,
 };
 
 export enum DataType {
@@ -40,7 +50,8 @@ export enum DataType {
 export enum ActionType {
 	LOW    = 'low',
 	HIGH   = 'high',
-	TOGGLE = 'toggle'
+	TOGGLE = 'toggle',
+	PWM    = 'pwm',
 }
 
 export enum ActionMode {
@@ -88,9 +99,10 @@ export type DeviceFrame = {
 	dataCtrl: {
 		isRead: boolean;
 		isWrite: boolean;
-		isToggle: boolean;
 		isAnalog: boolean;
+		isDigital: boolean;
 		isInput: boolean;
+		isOutput: boolean;
 		dataType: DataType;
 	};
 	configCtrl: {

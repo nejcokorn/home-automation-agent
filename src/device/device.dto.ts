@@ -89,21 +89,18 @@ export class DeviceConfigDto {
 }
 
 export class DeviceCommandDto {
-	@IsBoolean()
-	@IsDefined()
-	@Type(() => Boolean)
-	toggle: Boolean;
+	@IsEnum(ActionType)
+	type: ActionType;
 
-	@IsInt({ message: 'state must be an integer' })
-	@Min(0) @Max(1)
-	@IsDefined()
+	@IsInt({ message: 'delay must be positive integer number' })
+	@Min(0) @Max(4294967295)
+	@IsOptional()
 	@Type(() => Number)
-	state: number;
+	delay: number = 0;
 
-	@IsInt({ message: 'delay must be an integer' })
-	@Min(0) @Max(16777215)
-	@IsDefined()
+	@IsInt({ message: 'extra must be positive integer number' })
+	@Min(0) @Max(4294967295)
+	@IsOptional()
 	@Type(() => Number)
-	delay: number;
-
+	extra: number = 0;
 }

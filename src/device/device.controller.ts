@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, ParseArrayPipe, Post, UsePipes, ValidationPipe } from "@nestjs/common";
 import { DeviceService } from "src/device/device.service";
 import { DeviceConfigDto, DeviceCommandDto } from "./device.dto";
+import { DataControl } from "./device.types";
 
 @Controller()
 export class DeviceController {
@@ -136,9 +137,9 @@ export class DeviceController {
 			signalType,
 			direction,
 			portId,
-			toggle: payload.toggle,
-			state: payload.state,
-			delayLow: payload.delay
+			type: payload.type,
+			delay: payload.delay,
+			extra: payload.extra
 		});
 
 		// Read from device port
