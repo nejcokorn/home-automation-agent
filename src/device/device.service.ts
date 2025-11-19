@@ -106,7 +106,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 				if (payload.to == this.canAddresses.readPort
 					&& payload.commControl.isCommand == true
 					&& payload.commControl.isAcknowledge == true
-					&& payload.dataCtrl.isWrite == false
+					&& payload.dataCtrl.isSet == false
 					&& payload.port == optinos.portId
 				) {
 					resolve(payload.data);
@@ -146,7 +146,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 			let buf : Buffer = Buffer.alloc(8);
 			let commControl : number = CommControl.commandBit | (options.extra !== undefined || options.delay > 0 ? CommControl.waitBit : CommControl.empty);
 			let dataCtrl : number =
-				DataControl.write
+				DataControl.set
 				| (options.signalType == DataControl[DataControl.analog] ? DataControl.analog : DataControl.digital)
 				| (options.direction == DataControl[DataControl.input] ? DataControl.input : DataControl.output)
 				| DataControl.integer;
@@ -161,7 +161,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 				if (payload.to == this.canAddresses.readPort
 					&& payload.commControl.isCommand == true
 					&& payload.commControl.isAcknowledge == true
-					&& (payload.dataCtrl.isWrite == true)
+					&& (payload.dataCtrl.isSet == true)
 					&& payload.port == options.portId
 				) {
 					resolve(payload.data);
@@ -176,7 +176,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 			if (options.extra !== undefined) {
 				commControl = CommControl.commandBit | (options.delay > 0 ? CommControl.waitBit : CommControl.empty);
 				dataCtrl =
-					DataControl.write
+					DataControl.set
 					| (options.signalType == DataControl[DataControl.analog] ? DataControl.analog : DataControl.digital)
 					| (options.direction == DataControl[DataControl.input] ? DataControl.input : DataControl.output)
 					| DataControl.extra
@@ -189,13 +189,11 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 					data: buf
 				});
 			}
-			console.log(options.delay > 0);
 			
 			if (options.delay > 0) {
-				console.log(options);
 				commControl = CommControl.commandBit;
 				dataCtrl =
-					DataControl.write
+					DataControl.set
 					| (options.signalType == DataControl[DataControl.analog] ? DataControl.analog : DataControl.digital)
 					| (options.direction == DataControl[DataControl.input] ? DataControl.input : DataControl.output)
 					| DataControl.delay
@@ -374,7 +372,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 		await new ExtraPromise((resolve, reject) => {
 			// Construct buffer
 			let commControl: number = CommControl.commandBit;
-			let configCtrl: number =  ConfigControl.configBit | ConfigControl.write | ConfigType[options.configType];
+			let configCtrl: number =  ConfigControl.configBit | ConfigControl.set | ConfigType[options.configType];
 			let buf: Buffer = Buffer.alloc(8);
 			buf[0] = this.canAddresses.writeConfig;
 			buf[1] = commControl;
@@ -391,7 +389,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 					payload.commControl.isCommand == true &&
 					payload.commControl.isAcknowledge == true &&
 					payload.configCtrl.isConfig == true &&
-					payload.configCtrl.isWrite == true &&
+					payload.configCtrl.isSet == true &&
 					payload.configCtrl.option == ConfigType[options.configType]
 				) {
 					resolve(payload);
@@ -420,7 +418,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 				let configValue = await new ExtraPromise<number | ActionDto[]>((resolve, reject) => {
 					// Construct config for each input port
 					let commControl : number = CommControl.commandBit;
-					let configCtrl : number = ConfigControl.configBit | ConfigControl.read | config;
+					let configCtrl : number = ConfigControl.configBit | ConfigControl.get | config;
 					let buf : Buffer = Buffer.alloc(8);
 					buf[0] = this.canAddresses.readConfig;
 					buf[1] = commControl;
@@ -448,7 +446,6 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 									}
 								} else if(payload.configCtrl.option == ConfigType.delay) {
 									lastAction.delay = payload.data;
-									console.log(lastAction, payload.data);
 									
 									if (!payload.commControl.isWait) {
 										resolve(actionData);
@@ -509,7 +506,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 		await new ExtraPromise((resolve, reject) => {
 			let buf : Buffer = Buffer.alloc(8);
 			let commControl : number = CommControl.commandBit;
-			let configCtrl : number = ConfigControl.configBit | ConfigControl.write;
+			let configCtrl : number = ConfigControl.configBit | ConfigControl.set;
 			buf[0] = this.canAddresses.writeEEPROM;
 			buf[1] = commControl;
 			buf[2] = configCtrl;
@@ -519,7 +516,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 				if (payload.to == this.canAddresses.writeEEPROM
 					&& payload.commControl.isCommand == true
 					&& payload.commControl.isAcknowledge == true
-					&& payload.configCtrl.isWrite == true
+					&& payload.configCtrl.isSet == true
 					&& payload.configCtrl.option == ConfigType.writeEEPROM
 				) {
 					resolve(true);
@@ -551,8 +548,8 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 			isError: frame.data[1] & CommControl.errorBit ? true : false
 		};
 		let dataCtrl = {
-			isRead : (frame.data[2] & DataControl.operationBits) == DataControl.read ? true : false,
-			isWrite : (frame.data[2] & DataControl.operationBits) == DataControl.write ? true : false,
+			isGet : (frame.data[2] & DataControl.operationBits) == DataControl.get ? true : false,
+			isSet : (frame.data[2] & DataControl.operationBits) == DataControl.set ? true : false,
 			isAnalog : frame.data[2] & DataControl.analog ? true : false,
 			isDigital : !(frame.data[2] & DataControl.analog) ? true : false,
 			isInput : frame.data[2] & DataControl.input ? true : false,
@@ -561,8 +558,8 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 		};
 		let configCtrl = {
 			isConfig : frame.data[2] & ConfigControl.configBit ? true : false,
-			isRead : frame.data[2] & ConfigControl.operationBit ? false : true,
-			isWrite : frame.data[2] & ConfigControl.operationBit ? true : false,
+			isGet : frame.data[2] & ConfigControl.operationBit ? false : true,
+			isSet : frame.data[2] & ConfigControl.operationBit ? true : false,
 			option : frame.data[2] & ConfigControl.optionBits
 		};
 		let port = frame.data[3];

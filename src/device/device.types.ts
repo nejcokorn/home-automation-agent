@@ -15,8 +15,8 @@ export enum DataControl {
 	directionBit  = 0x04,
 	dataTypeBits  = 0x03,
 	// Specific Types
-	read          = 0x00,
-	write         = 0x10,
+	get           = 0x00,
+	set           = 0x10,
 	extra         = 0x20,
 	delay         = 0x30,
 	listDelays    = 0x40,
@@ -36,8 +36,8 @@ export enum ConfigControl {
 	operationBit = 0x40,
 	optionBits   = 0x3F,
 	// Specific Types
-	write        = 0x40,
-	read         = 0x00,
+	get          = 0x00,
+	set          = 0x40,
 };
 
 export enum DataType {
@@ -97,8 +97,8 @@ export type DeviceFrame = {
 		isError: boolean;
 	};
 	dataCtrl: {
-		isRead: boolean;
-		isWrite: boolean;
+		isGet: boolean;
+		isSet: boolean;
 		isAnalog: boolean;
 		isDigital: boolean;
 		isInput: boolean;
@@ -107,8 +107,8 @@ export type DeviceFrame = {
 	};
 	configCtrl: {
 		isConfig: boolean;
-		isRead: boolean;
-		isWrite: boolean;
+		isGet: boolean;
+		isSet: boolean;
 		option: ConfigType;
 	}
 	port: number;
