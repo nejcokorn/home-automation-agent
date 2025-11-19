@@ -8,7 +8,7 @@ import { DeviceConfigDto, ActionDto } from "./device.dto";
 
 type Unsubscribe = () => void;
 
-// Gropu of general configuratino to read from
+// Gropu of general configurations
 const generalConfigs = [
 	ConfigType.buttonRisingEdge,
 	ConfigType.buttonFallingEdge,
@@ -53,12 +53,12 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 	}
 
 	private canAddresses = {
-		readPort: 0xF0,
-		write: 0xF1,
+		getPort: 0xF0,
+		setPort: 0xF1,
 		discover: 0xF2,
 		ping: 0xF3,
-		readConfig: 0xF4,
-		writeConfig: 0xF5,
+		getConfig: 0xF4,
+		setConfig: 0xF5,
 		writeEEPROM: 0xF6,
 		broadcast: 0x0FF,
 	}
@@ -89,21 +89,21 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 		return () => this.listeners.delete(fn);
 	}
 
-	public async readPort(optinos: { iface: string, deviceId: number, signalType: string, direction: string, portId: number }) {
+	public async getPort(optinos: { iface: string, deviceId: number, signalType: string, direction: string, portId: number }) {
 		let unsubscribe: Unsubscribe = () => {};
 		
 		return await new ExtraPromise((resolve, reject) => {
 			let buf : Buffer = Buffer.alloc(8);
 			let commControl : number = CommControl.commandBit;
 			let dataCtrl : number = (optinos.signalType == DataControl[DataControl.analog] ? DataControl.analog : DataControl.digital) | (optinos.direction == DataControl[DataControl.input] ? DataControl.input : DataControl.output)
-			buf[0] = this.canAddresses.readPort;
+			buf[0] = this.canAddresses.getPort;
 			buf[1] = commControl;
 			buf[2] = dataCtrl;
 			buf[3] = optinos.portId;
 
 			unsubscribe = this.can.subscribe((frame: CanFrame) => {
 				let payload = this.parseFrame(frame);
-				if (payload.to == this.canAddresses.readPort
+				if (payload.to == this.canAddresses.getPort
 					&& payload.commControl.isCommand == true
 					&& payload.commControl.isAcknowledge == true
 					&& payload.dataCtrl.isSet == false
@@ -124,7 +124,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 		});
 	}
 
-	public async writePort(options: { iface: string, deviceId: number, signalType: string, direction: string, portId: number, type: ActionType, delay: number, extra: number }) {
+	public async setPort(options: { iface: string, deviceId: number, signalType: string, direction: string, portId: number, type: ActionType, delay: number, extra: number }) {
 		let unsubscribe: Unsubscribe = () => {};
 		
 		return await new ExtraPromise((resolve, reject) => {
@@ -150,7 +150,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 				| (options.signalType == DataControl[DataControl.analog] ? DataControl.analog : DataControl.digital)
 				| (options.direction == DataControl[DataControl.input] ? DataControl.input : DataControl.output)
 				| DataControl.integer;
-			buf[0] = this.canAddresses.readPort;
+			buf[0] = this.canAddresses.setPort;
 			buf[1] = commControl;
 			buf[2] = dataCtrl;
 			buf[3] = options.portId;
@@ -158,7 +158,12 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 
 			unsubscribe = this.can.subscribe((frame: CanFrame) => {
 				let payload = this.parseFrame(frame);
-				if (payload.to == this.canAddresses.readPort
+				console.log(payload.to == this.canAddresses.setPort);
+				console.log(payload.commControl.isCommand == true);
+				console.log(payload.commControl.isAcknowledge == true);
+				console.log((payload.dataCtrl.isSet == true));
+				console.log(payload.port == options.portId);
+				if (payload.to == this.canAddresses.setPort
 					&& payload.commControl.isCommand == true
 					&& payload.commControl.isAcknowledge == true
 					&& (payload.dataCtrl.isSet == true)
@@ -374,7 +379,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 			let commControl: number = CommControl.commandBit;
 			let configCtrl: number =  ConfigControl.configBit | ConfigControl.set | ConfigType[options.configType];
 			let buf: Buffer = Buffer.alloc(8);
-			buf[0] = this.canAddresses.writeConfig;
+			buf[0] = this.canAddresses.setConfig;
 			buf[1] = commControl;
 			buf[2] = configCtrl;
 			buf[3] = options.idxPort;
@@ -384,7 +389,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 			unsubscribe = this.can.subscribe((frame: CanFrame) => {
 				let payload = this.parseFrame(frame);
 				if (
-					payload.to == this.canAddresses.writeConfig &&
+					payload.to == this.canAddresses.setConfig &&
 					payload.from == options.deviceId &&
 					payload.commControl.isCommand == true &&
 					payload.commControl.isAcknowledge == true &&
@@ -420,7 +425,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 					let commControl : number = CommControl.commandBit;
 					let configCtrl : number = ConfigControl.configBit | ConfigControl.get | config;
 					let buf : Buffer = Buffer.alloc(8);
-					buf[0] = this.canAddresses.readConfig;
+					buf[0] = this.canAddresses.getConfig;
 					buf[1] = commControl;
 					buf[2] = configCtrl;
 					buf[3] = idxPort;
@@ -431,7 +436,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 
 					unsubscribe = this.can.subscribe((frame: CanFrame) => { 
 						let payload = this.parseFrame(frame);
-						if (payload.to == this.canAddresses.readConfig
+						if (payload.to == this.canAddresses.getConfig
 							&& payload.commControl.isCommand == true
 							&& payload.commControl.isAcknowledge == true
 							&& payload.configCtrl.isConfig == true

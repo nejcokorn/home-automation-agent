@@ -96,7 +96,7 @@ export class DeviceController {
 	}
 	
 	@Get('can/:iface/device/:deviceId/:signalType/:direction/:portId')
-	async readPort(
+	async getPort(
 		@Param('iface') iface: string,
 		@Param('deviceId') deviceId: number,
 		@Param('signalType') signalType: string,
@@ -104,7 +104,7 @@ export class DeviceController {
 		@Param('portId') portId: number,
 	) {
 		// Read from device port
-		let state = await this.device.readPort({
+		let state = await this.device.getPort({
 			iface,
 			deviceId,
 			signalType,
@@ -122,7 +122,7 @@ export class DeviceController {
 		whitelist: true,
 		forbidNonWhitelisted: true
 	}))
-	async writePort(
+	async setPort(
 		@Param('iface') iface: string,
 		@Param('deviceId') deviceId: number,
 		@Param('signalType') signalType: string,
@@ -131,7 +131,7 @@ export class DeviceController {
 		@Body() payload: DeviceCommandDto,
 	) {
 		// Write to device port
-		let state = await this.device.writePort({
+		let state = await this.device.setPort({
 			iface,
 			deviceId,
 			signalType,
