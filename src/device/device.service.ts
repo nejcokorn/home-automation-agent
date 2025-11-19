@@ -158,11 +158,6 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 
 			unsubscribe = this.can.subscribe((frame: CanFrame) => {
 				let payload = this.parseFrame(frame);
-				console.log(payload.to == this.canAddresses.setPort);
-				console.log(payload.commControl.isCommand == true);
-				console.log(payload.commControl.isAcknowledge == true);
-				console.log((payload.dataCtrl.isSet == true));
-				console.log(payload.port == options.portId);
 				if (payload.to == this.canAddresses.setPort
 					&& payload.commControl.isCommand == true
 					&& payload.commControl.isAcknowledge == true
