@@ -60,7 +60,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 		readConfig: 0xF4,
 		writeConfig: 0xF5,
 		writeEEPROM: 0xF6,
-		broadcast: 0x7FF,
+		broadcast: 0x0FF,
 	}
 
 	constructor(
