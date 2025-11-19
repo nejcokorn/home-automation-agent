@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from "@nestjs/common";
 import { CanFrame } from "src/can/can.types";
-import { CommControl, DataControl, ConfigControl, ConfigType, DataType, DeviceFrame, ActionType, ActionMode } from "src/device/device.types";
+import { CommControl, DataControl, ConfigControl, ConfigType, DeviceFrame, ActionType, ActionMode } from "src/device/device.types";
 import { LoggerExtra } from "src/extras/logger.extra";
 import { ExtraPromise } from "src/extras/promise.extra";
 import { CanService } from "src/can/can.service";
@@ -144,7 +144,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 					break;
 			}
 			let buf : Buffer = Buffer.alloc(8);
-			let commControl : number = CommControl.commandBit | (options.extra > 0 || options.delay > 0 ? CommControl.waitBit : CommControl.empty);
+			let commControl : number = CommControl.commandBit | (options.extra !== undefined || options.delay > 0 ? CommControl.waitBit : CommControl.empty);
 			let dataCtrl : number =
 				DataControl.write
 				| (options.signalType == DataControl[DataControl.analog] ? DataControl.analog : DataControl.digital)
@@ -173,18 +173,35 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 				data: buf
 			});
 
-			if (options.extra) {
+			if (options.extra !== undefined) {
 				commControl = CommControl.commandBit | (options.delay > 0 ? CommControl.waitBit : CommControl.empty);
+				dataCtrl =
+					DataControl.write
+					| (options.signalType == DataControl[DataControl.analog] ? DataControl.analog : DataControl.digital)
+					| (options.direction == DataControl[DataControl.input] ? DataControl.input : DataControl.output)
+					| DataControl.extra
+					| DataControl.integer;
 				buf[1] = commControl;
+				buf[2] = dataCtrl;
 				Buffer.from([options.extra >> 24, options.extra >> 16, options.extra >> 8, options.extra]).copy(buf, 4);
 				this.can.send(options.iface, {
 					id: options.deviceId,
 					data: buf
 				});
 			}
-			if (options.delay) {
+			console.log(options.delay > 0);
+			
+			if (options.delay > 0) {
+				console.log(options);
 				commControl = CommControl.commandBit;
+				dataCtrl =
+					DataControl.write
+					| (options.signalType == DataControl[DataControl.analog] ? DataControl.analog : DataControl.digital)
+					| (options.direction == DataControl[DataControl.input] ? DataControl.input : DataControl.output)
+					| DataControl.delay
+					| DataControl.integer;
 				buf[1] = commControl;
+				buf[2] = dataCtrl;
 				Buffer.from([options.delay >> 24, options.delay >> 16, options.delay >> 8, options.delay]).copy(buf, 4);
 				this.can.send(options.iface, {
 					id: options.deviceId,

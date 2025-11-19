@@ -102,5 +102,5 @@ export class DeviceCommandDto {
 	@Min(0) @Max(4294967295)
 	@IsOptional()
 	@Type(() => Number)
-	extra: number = 0;
+	extra: number;
 }
