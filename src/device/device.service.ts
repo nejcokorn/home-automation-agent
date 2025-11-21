@@ -481,7 +481,7 @@ export class DeviceService {
 	public async writeEEPROM(iface: string, deviceId: number) {
 		let unsubscribe: Unsubscribe = () => {};
 		
-		await new ExtraPromise((resolve, reject) => {
+		return new ExtraPromise((resolve, reject) => {
 			let buf : Buffer = Buffer.alloc(8);
 			let commControl : number = CommControl.commandBit;
 			let configCtrl : number = ConfigControl.configBit | ConfigControl.set;
@@ -497,7 +497,7 @@ export class DeviceService {
 					&& payload.configCtrl.isSet == true
 					&& payload.configCtrl.option == ConfigType.writeEEPROM
 				) {
-					resolve(true);
+					resolve(payload.data);
 				}
 			});
 			
@@ -510,8 +510,6 @@ export class DeviceService {
 		.finally(() => {
 			unsubscribe();
 		});
-
-		return true;
 	}
 
 	parseFrame(frame: CanFrame): DeviceFrame {

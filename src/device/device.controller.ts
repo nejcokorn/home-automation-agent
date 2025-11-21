@@ -92,7 +92,11 @@ export class DeviceController {
 		@Param('deviceId') deviceId: number
 	) {
 		// Write device configuration
-		return await this.device.writeEEPROM(iface, deviceId);
+		let EEPROMSize = await this.device.writeEEPROM(iface, deviceId);
+
+		return {
+			size: EEPROMSize
+		}
 	}
 	
 	@Get('can/:iface/device/:deviceId/:signalType/:direction/:portId')
