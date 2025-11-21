@@ -49,7 +49,8 @@ export class DeviceService {
 		grace: 70,
 		ping: 100,
 		discover: 100,
-		EEPROM: 60000 // Long operation - timeout after 1 min (usually between 30 sec and 1 min)
+		EEPROM: 60000, // Long operation - timeout after 1 min (usually between 30 sec and 1 min)
+		listDelays: 1000
 	}
 
 	canAddresses = {
@@ -60,6 +61,7 @@ export class DeviceService {
 		getConfig: 0xF4,
 		setConfig: 0xF5,
 		writeEEPROM: 0xF6,
+		listDelays: 0xF7,
 		broadcast: 0x0FF,
 	}
 
@@ -516,6 +518,55 @@ export class DeviceService {
 		});
 	}
 
+	public async listDelays(iface: string, deviceId: number){
+		let unsubscribe: Unsubscribe = () => {};
+		
+		return new ExtraPromise((resolve, reject) => {
+			let buf : Buffer = Buffer.alloc(8);
+			let commControl : number = CommControl.commandBit;
+			let dataCtrl : number = DataControl.listDelays;
+			let delays: { deviceId: number, delay: number, port:number, type: ActionType }[] = [];
+			let delay: { deviceId: number, delay: number, port:number, type: ActionType };
+			buf[0] = this.canAddresses.listDelays;
+			buf[1] = commControl;
+			buf[2] = dataCtrl;
+
+			unsubscribe = this.canService.subscribe((can: Can, frame: CanFrame) => {
+				let payload = this.parseFrame(frame);
+				if (payload.to == this.canAddresses.listDelays
+					&& payload.commControl.isAcknowledge == true
+					&& payload.dataCtrl.isListDelays == true
+				) {
+					if (payload.commControl.isWait) {
+						if (payload.port != 0xFF) {
+							delay = {
+								deviceId: (payload.data & 0xFF000000) >> 24,
+								port: payload.port,
+								type: (payload.data & 0xFF) == 0 ? ActionType.LOW : (payload.data & 0xFF) == 1 ? ActionType.HIGH : ActionType.TOGGLE,
+								delay: 0,
+							}
+						} else {
+							delay.delay = payload.data
+							delays.push(delay);
+						}
+
+					} else {
+						resolve(delays);
+					}
+				}
+			});
+			
+			this.canService.send(iface, {
+				id: deviceId,
+				data: buf
+			});
+		})
+		.timeout(this.timeout.listDelays)
+		.finally(() => {
+			unsubscribe();
+		});
+	}
+
 	parseFrame(frame: CanFrame): DeviceFrame {
 		let to = frame.id;
 		let from = frame.data[0];
@@ -530,6 +581,7 @@ export class DeviceService {
 		let dataCtrl = {
 			isGet : (frame.data[2] & DataControl.operationBits) == DataControl.get ? true : false,
 			isSet : (frame.data[2] & DataControl.operationBits) == DataControl.set ? true : false,
+			isListDelays : (frame.data[2] & DataControl.operationBits) == DataControl.listDelays ? true : false,
 			isAnalog : frame.data[2] & DataControl.analog ? true : false,
 			isDigital : !(frame.data[2] & DataControl.analog) ? true : false,
 			isInput : frame.data[2] & DataControl.input ? true : false,

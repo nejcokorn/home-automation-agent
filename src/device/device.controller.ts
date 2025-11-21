@@ -98,7 +98,19 @@ export class DeviceController {
 			size: EEPROMSize
 		}
 	}
-	
+
+	@Get('can/:iface/device/:deviceId/delay')
+	async listDelays(
+		@Param('iface') iface: string,
+		@Param('deviceId') deviceId: number,
+	) {
+		// Get device configuration
+		let delays = await this.device.listDelays(iface, deviceId);
+
+		// Return configuration
+		return delays;
+	}
+
 	@Get('can/:iface/device/:deviceId/:signalType/:direction/:portId')
 	async getPort(
 		@Param('iface') iface: string,

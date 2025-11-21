@@ -99,6 +99,7 @@ export type DeviceFrame = {
 	dataCtrl: {
 		isGet: boolean;
 		isSet: boolean;
+		isListDelays: boolean;
 		isAnalog: boolean;
 		isDigital: boolean;
 		isInput: boolean;
