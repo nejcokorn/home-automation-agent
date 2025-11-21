@@ -272,8 +272,7 @@ export class DeviceService {
 
 	public async setConfig(options: { iface: string, deviceId: number, config: DeviceConfigDto[] }) {
 		await new ExtraPromise(async (resolve, reject) => {
-			for (let idxPort = 0; idxPort < options.config.length; idxPort++) {
-				let inputConfig = options.config[idxPort];
+			for (const inputConfig of options.config) {
 
 				// Loop through the actions
 				for (const configType in inputConfig) {
@@ -282,7 +281,8 @@ export class DeviceService {
 					if (configType == ConfigType[ConfigType.actions]) {
 						// Remove all actions before inserting new set of actions
 						await this.sendConfig({
-							...options, idxPort,
+							...options,
+							inputPortIdx: inputConfig.inputPortIdx,
 							configType: ConfigType[ConfigType.actions], 
 							data: 0
 						});
@@ -315,7 +315,8 @@ export class DeviceService {
 									break;
 							}
 							await this.sendConfig({
-								...options, idxPort,
+								...options,
+								inputPortIdx: inputConfig.inputPortIdx,
 								configType: configType,
 								data: data
 							});
@@ -323,7 +324,8 @@ export class DeviceService {
 							// Only send delay if not equal 0
 							if (action.delay != 0) {
 								await this.sendConfig({
-									...options, idxPort,
+									...options,
+									inputPortIdx: inputConfig.inputPortIdx,
 									configType: ConfigType[ConfigType.delay],
 									data: action.delay
 								});
@@ -332,7 +334,7 @@ export class DeviceService {
 					} else {
 						await this.sendConfig({
 							...options,
-							idxPort,
+							inputPortIdx: inputConfig.inputPortIdx,
 							configType,
 							data: value
 						});
@@ -345,7 +347,7 @@ export class DeviceService {
 		.catch((error) => error);
 	}
 
-	private async sendConfig(options: { iface: string, deviceId: number, idxPort: number, configType: string, data: number }) {
+	private async sendConfig(options: { iface: string, deviceId: number, inputPortIdx: number, configType: string, data: number }) {
 		let unsubscribe: Unsubscribe = () => {};
 		await new ExtraPromise((resolve, reject) => {
 			// Construct buffer
@@ -355,7 +357,7 @@ export class DeviceService {
 			buf[0] = this.canAddresses.setConfig;
 			buf[1] = commControl;
 			buf[2] = configCtrl;
-			buf[3] = options.idxPort;
+			buf[3] = options.inputPortIdx;
 			Buffer.from([options.data >> 16, options.data >> 8, options.data]).copy(buf, 5);
 
 			// Subscribe for ACK
@@ -385,12 +387,14 @@ export class DeviceService {
 		.finally(() => unsubscribe());
 	}
 
-	public async getConfig(options: { iface: string, deviceId: number }) {
+	public async getConfig(options: { iface: string, deviceId: number }): Promise<DeviceConfigDto> {
 		// Initialize configuration object
 		let deviceConfig: any = [];
 		
-		for (let idxPort = 0; idxPort < 16; idxPort++) {
-			let inputConfig = {};
+		for (let inputPortIdx = 0; inputPortIdx < 16; inputPortIdx++) {
+			let inputConfig = {
+				inputPortIdx
+			};
 			for (let config of generalConfigs) {
 				let unsubscribe: Unsubscribe = () => {};
 				let configValue = await new ExtraPromise<number | ActionDto[]>((resolve, reject) => {
@@ -401,7 +405,7 @@ export class DeviceService {
 					buf[0] = this.canAddresses.getConfig;
 					buf[1] = commControl;
 					buf[2] = configCtrl;
-					buf[3] = idxPort;
+					buf[3] = inputPortIdx;
 
 					// Config data retrived from device
 					let actionData: ActionDto[] = [];

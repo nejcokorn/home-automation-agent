@@ -30,6 +30,12 @@ export class DeviceConfigDto {
 	// Button press states (e.g., 0/1)
 	@IsInt()
 	@Min(0)
+	@Max(15)
+	inputPortIdx: number;
+
+	// Button press states (e.g., 0/1)
+	@IsInt()
+	@Min(0)
 	@Max(1)
 	buttonRisingEdge: number;
 
