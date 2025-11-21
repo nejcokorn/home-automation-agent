@@ -13,7 +13,7 @@ export class CanService implements OnModuleInit, OnModuleDestroy {
 	private ifaceStatusCheckInterval?: NodeJS.Timeout;
 	private patterns: string[] = [];
 
-	private listeners = new Set<(frame: CanFrame) => void>();
+	private listeners = new Set<(can: Can, frame: CanFrame) => void>();
 
 	async onModuleInit() {
 		let query = "can*";
@@ -42,7 +42,7 @@ export class CanService implements OnModuleInit, OnModuleDestroy {
 		return [...this.canMap.values()].map((can) => can.iface);
 	}
 
-	subscribe(fn: (frame: CanFrame) => void): Unsubscribe {
+	subscribe(fn: (can: Can, frame: CanFrame) => void): Unsubscribe {
 		this.listeners.add(fn);
 		return () => this.listeners.delete(fn);
 	}
@@ -118,7 +118,7 @@ export class CanService implements OnModuleInit, OnModuleDestroy {
 		let can: Can = {
 			channel: null as any,
 			iface: {
-				iface,
+				name:iface,
 				rxCount: 0,
 				txCount: 0,
 			}
@@ -133,7 +133,7 @@ export class CanService implements OnModuleInit, OnModuleDestroy {
 				try {
 					can.iface.rxCount++;
 					for (const listener of this.listeners) {
-						listener(frame);
+						listener(can, frame);
 					}
 				} catch (error) {
 					this.logger.error(`[${iface}] RX handler error: ${(error as Error).message}`,);

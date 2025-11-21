@@ -38,9 +38,6 @@ export class MqttService implements OnModuleInit, OnModuleDestroy {
 		this.client.on("error", (e) =>
 			this.logger.error(`MQTT error: ${e.message}`),
 		);
-
-		// Set subscriptions
-		this.subscribe('can/device/+/', this.discover);
 	}
 
 	onModuleDestroy() {
@@ -80,7 +77,7 @@ export class MqttService implements OnModuleInit, OnModuleDestroy {
 		}
 	}
 
-	// preprost matcher za +/# (zadostuje za naš primer)
+	// Match topic
 	private topicMatch(actual: string, sub: string) {
 		if (sub === actual) return true;
 		const subParts = sub.split("/");
@@ -92,11 +89,5 @@ export class MqttService implements OnModuleInit, OnModuleDestroy {
 			if (s !== "+" && s !== a) return false;
 		}
 		return subParts.length === actParts.length;
-	}
-
-	// can/
-	private async discover(topic: string, payload: any){
-		// let devices = await this.device.discover(topic.split('/')[1]);
-		
 	}
 }

@@ -1,5 +1,5 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from "@nestjs/common";
-import { CanFrame } from "src/can/can.types";
+import { Can, CanFrame } from "src/can/can.types";
 import { CommControl, DataControl, ConfigControl, ConfigType, DeviceFrame, ActionType, ActionMode } from "src/device/device.types";
 import { LoggerExtra } from "src/extras/logger.extra";
 import { ExtraPromise } from "src/extras/promise.extra";
@@ -37,7 +37,7 @@ const actionConfigs = [
 ]
 
 @Injectable()
-export class DeviceService implements OnModuleInit, OnModuleDestroy {
+export class DeviceService {
 	private readonly logger = new LoggerExtra(DeviceService.name);
 
 	private unsubscribeEvents: Unsubscribe = () => {};
@@ -52,7 +52,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 		EEPROM: 60000 // Long operation - timeout after 1 min (usually between 30 sec and 1 min)
 	}
 
-	private canAddresses = {
+	canAddresses = {
 		getPort: 0xF0,
 		setPort: 0xF1,
 		discover: 0xF2,
@@ -64,30 +64,8 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 	}
 
 	constructor(
-		private readonly can: CanService
+		private readonly canService: CanService
 	) {}
-
-	async onModuleInit() {
-		this.unsubscribeEvents = this.can.subscribe((frame: CanFrame) => {
-			let payload = this.parseFrame(frame);
-			// Catch all boradcast packages
-			if (payload.to == this.canAddresses.broadcast) {
-				// Distrubute this package to listeners
-				for (const listener of this.listeners) {
-					listener(payload);
-				}
-			}
-		});
-	}
-
-	async onModuleDestroy() {
-		this.unsubscribeEvents();
-	}
-
-	subscribe(fn: (event: DeviceFrame) => void): Unsubscribe {
-		this.listeners.add(fn);
-		return () => this.listeners.delete(fn);
-	}
 
 	public async getPort(optinos: { iface: string, deviceId: number, signalType: string, direction: string, portId: number }) {
 		let unsubscribe: Unsubscribe = () => {};
@@ -101,7 +79,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 			buf[2] = dataCtrl;
 			buf[3] = optinos.portId;
 
-			unsubscribe = this.can.subscribe((frame: CanFrame) => {
+			unsubscribe = this.canService.subscribe((can: Can, frame: CanFrame) => {
 				let payload = this.parseFrame(frame);
 				if (payload.to == this.canAddresses.getPort
 					&& payload.commControl.isCommand == true
@@ -113,7 +91,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 				}
 			});
 			
-			this.can.send(optinos.iface, {
+			this.canService.send(optinos.iface, {
 				id: optinos.deviceId,
 				data: buf
 			});
@@ -156,7 +134,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 			buf[3] = options.portId;
 			Buffer.from([data >> 24, data >> 16, data >> 8, data]).copy(buf, 4);
 
-			unsubscribe = this.can.subscribe((frame: CanFrame) => {
+			unsubscribe = this.canService.subscribe((can: Can, frame: CanFrame) => {
 				let payload = this.parseFrame(frame);
 				if (payload.to == this.canAddresses.setPort
 					&& payload.commControl.isCommand == true
@@ -168,7 +146,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 				}
 			});
 			
-			this.can.send(options.iface, {
+			this.canService.send(options.iface, {
 				id: options.deviceId,
 				data: buf
 			});
@@ -184,7 +162,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 				buf[1] = commControl;
 				buf[2] = dataCtrl;
 				Buffer.from([options.extra >> 24, options.extra >> 16, options.extra >> 8, options.extra]).copy(buf, 4);
-				this.can.send(options.iface, {
+				this.canService.send(options.iface, {
 					id: options.deviceId,
 					data: buf
 				});
@@ -201,7 +179,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 				buf[1] = commControl;
 				buf[2] = dataCtrl;
 				Buffer.from([options.delay >> 24, options.delay >> 16, options.delay >> 8, options.delay]).copy(buf, 4);
-				this.can.send(options.iface, {
+				this.canService.send(options.iface, {
 					id: options.deviceId,
 					data: buf
 				});
@@ -228,7 +206,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 			let timeout = setTimeout(() => {
 				resolve(deviceList);
 			}, this.timeout.grace);
-			unsubscribe = this.can.subscribe((frame: CanFrame) => {
+			unsubscribe = this.canService.subscribe((can: Can, frame: CanFrame) => {
 				let payload = this.parseFrame(frame);
 				if (payload.to == this.canAddresses.ping
 					&& payload.commControl.isCommand == true
@@ -244,7 +222,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 				}
 			});
 
-			this.can.send(options.iface, {
+			this.canService.send(options.iface, {
 				id: options.deviceId,
 				data: buf
 			});
@@ -270,7 +248,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 			let timeout = setTimeout(() => {
 				resolve(deviceList);
 			}, this.timeout.grace);
-			unsubscribe = this.can.subscribe((frame: CanFrame) => {
+			unsubscribe = this.canService.subscribe((can: Can, frame: CanFrame) => {
 				let payload = this.parseFrame(frame);
 				if (payload.to == this.canAddresses.discover
 					&& payload.commControl.isCommand == true
@@ -281,7 +259,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 				}
 			});
 
-			this.can.send(options.iface, {
+			this.canService.send(options.iface, {
 				id: this.canAddresses.broadcast,
 				data: buf
 			});
@@ -381,7 +359,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 			Buffer.from([options.data >> 16, options.data >> 8, options.data]).copy(buf, 5);
 
 			// Subscribe for ACK
-			unsubscribe = this.can.subscribe((frame: CanFrame) => {
+			unsubscribe = this.canService.subscribe((can: Can, frame: CanFrame) => {
 				let payload = this.parseFrame(frame);
 				if (
 					payload.to == this.canAddresses.setConfig &&
@@ -397,7 +375,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 			});
 
 			// Send data
-			this.can.send(options.iface, {
+			this.canService.send(options.iface, {
 				id: options.deviceId,
 				data: buf
 			});
@@ -429,7 +407,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 					let actionData: ActionDto[] = [];
 					let lastAction: ActionDto;
 
-					unsubscribe = this.can.subscribe((frame: CanFrame) => { 
+					unsubscribe = this.canService.subscribe((can: Can, frame: CanFrame) => { 
 						let payload = this.parseFrame(frame);
 						if (payload.to == this.canAddresses.getConfig
 							&& payload.commControl.isCommand == true
@@ -483,7 +461,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 						}
 					});
 
-					this.can.send(options.iface, {
+					this.canService.send(options.iface, {
 						id: options.deviceId,
 						data: buf
 					});
@@ -511,7 +489,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 			buf[1] = commControl;
 			buf[2] = configCtrl;
 
-			unsubscribe = this.can.subscribe((frame: CanFrame) => {
+			unsubscribe = this.canService.subscribe((can: Can, frame: CanFrame) => {
 				let payload = this.parseFrame(frame);
 				if (payload.to == this.canAddresses.writeEEPROM
 					&& payload.commControl.isCommand == true
@@ -523,7 +501,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 				}
 			});
 			
-			this.can.send(iface, {
+			this.canService.send(iface, {
 				id: deviceId,
 				data: buf
 			});
@@ -536,7 +514,7 @@ export class DeviceService implements OnModuleInit, OnModuleDestroy {
 		return true;
 	}
 
-	private parseFrame(frame: CanFrame): DeviceFrame {
+	parseFrame(frame: CanFrame): DeviceFrame {
 		let to = frame.id;
 		let from = frame.data[0];
 		let commControl = {
