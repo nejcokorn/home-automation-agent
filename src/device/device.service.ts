@@ -291,7 +291,7 @@ export class DeviceService {
 
 						// Loop thorugh set of actions
 						for (const action of inputConfig[configType]) {
-							let data = action.deviceId << 16 | this.portsToHex(action.ports);
+							let data = action.deviceId << 24 | this.portsToHex(action.ports);
 							let configType;
 							switch (action.mode) {
 								case ActionMode.NORMAL:
@@ -360,7 +360,7 @@ export class DeviceService {
 			buf[1] = commControl;
 			buf[2] = configCtrl;
 			buf[3] = options.inputPortIdx;
-			Buffer.from([options.data >> 16, options.data >> 8, options.data]).copy(buf, 5);
+			Buffer.from([options.data >> 24, options.data >> 16, options.data >> 8, options.data]).copy(buf, 4);
 
 			// Subscribe for ACK
 			unsubscribe = this.canService.subscribe((can: Can, frame: CanFrame) => {
@@ -449,7 +449,7 @@ export class DeviceService {
 										case ConfigType.actionDoubleToggle: mode = ActionMode.DOUBLECLICK; type = ActionType.TOGGLE; break;
 									}
 
-									let deviceId = payload.data >> 16;
+									let deviceId = payload.data >> 24;
 									if (deviceId != 0xFF) {
 										lastAction = {
 											deviceId,
