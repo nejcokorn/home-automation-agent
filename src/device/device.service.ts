@@ -13,7 +13,6 @@ const generalConfigs = [
 	ConfigType.buttonRisingEdge,
 	ConfigType.buttonFallingEdge,
 	ConfigType.debounce,
-	ConfigType.longpress,
 	ConfigType.doubleclick,
 	ConfigType.actions,
 	ConfigType.bypassInstantly,
@@ -23,16 +22,10 @@ const generalConfigs = [
 
 // Group of action configurations
 const actionConfigs = [
-	ConfigType.delay,
-	ConfigType.actionToggle,
-	ConfigType.actionHigh,
-	ConfigType.actionLow,
-	ConfigType.actionLongToggle,
-	ConfigType.actionLongHigh,
-	ConfigType.actionLongLow,
-	ConfigType.actionDoubleToggle,
-	ConfigType.actionDoubleHigh,
-	ConfigType.actionDoubleLow
+	ConfigType.actionBase,
+	ConfigType.actionPorts,
+	ConfigType.actionDelay,
+	ConfigType.actionLongpress,
 ]
 
 @Injectable()
@@ -290,49 +283,54 @@ export class DeviceService {
 
 						// Loop thorugh set of actions
 						for (const action of inputConfig[configType]) {
-							let data = action.deviceId << 24 | this.portsToHex(action.ports);
-							let configType;
-							switch (action.mode) {
-								case ActionMode.click:
-									switch (action.type) {
-										case ActionType.low: configType = ConfigType[ConfigType.actionLow]; break;
-										case ActionType.high: configType = ConfigType[ConfigType.actionHigh]; break;
-										case ActionType.toggle: configType = ConfigType[ConfigType.actionToggle]; break;
-									}
-									break;
-								case ActionMode.longpress:
-									switch (action.type) {
-										case ActionType.low: configType = ConfigType[ConfigType.actionLongLow]; break;
-										case ActionType.high: configType = ConfigType[ConfigType.actionLongHigh]; break;
-										case ActionType.toggle: configType = ConfigType[ConfigType.actionLongToggle]; break;
-									}
-									break;
-								case ActionMode.doubleclick:
-									switch (action.type) {
-										case ActionType.low: configType = ConfigType[ConfigType.actionDoubleLow]; break;
-										case ActionType.high: configType = ConfigType[ConfigType.actionDoubleHigh]; break;
-										case ActionType.toggle: configType = ConfigType[ConfigType.actionDoubleToggle]; break;
-									}
-									break;
+							let type: number = 0;
+							switch (action.type) {
+								case ActionType.low: type = 0; break;
+								case ActionType.high: type = 1; break;
+								case ActionType.toggle: type = 2; break;
+								case ActionType.pwm: type = 3; break;
 							}
+
+							let mode: number = 0;
+							switch (action.mode) {
+								case ActionMode.click: mode = 0; break;
+								case ActionMode.longpress: mode = 1; break;
+								case ActionMode.doubleclick: mode = 2; break;
+							}
+
+							// P1 - action base
 							await this.sendConfig({
 								...options,
 								inputPortIdx: inputConfig.inputPortIdx,
-								configType: configType,
-								data: data
+								configType: ConfigType[ConfigType.actionBase],
+								data: action.deviceId << 24 | mode << 8 | type
 							});
 
-							// Only send delay if not equal 0
-							if (action.delay != 0) {
-								await this.sendConfig({
-									...options,
-									inputPortIdx: inputConfig.inputPortIdx,
-									configType: ConfigType[ConfigType.delay],
-									data: action.delay
-								});
-							}
+							// P2 - action ports
+							await this.sendConfig({
+								...options,
+								inputPortIdx: inputConfig.inputPortIdx,
+								configType: ConfigType[ConfigType.actionPorts],
+								data: this.portsToHex(action.ports)
+							});
+
+							// P3 - action delay
+							await this.sendConfig({
+								...options,
+								inputPortIdx: inputConfig.inputPortIdx,
+								configType: ConfigType[ConfigType.actionDelay],
+								data: action.delay
+							});
+
+							// P4 - action longpress
+							await this.sendConfig({
+								...options,
+								inputPortIdx: inputConfig.inputPortIdx,
+								configType: ConfigType[ConfigType.actionLongpress],
+								data: action.longpress
+							});
 						}
-					} else {
+					} else if (Object.values(ConfigType).filter(v => typeof v === "string").includes(configType)){
 						await this.sendConfig({
 							...options,
 							inputPortIdx: inputConfig.inputPortIdx,
@@ -422,43 +420,54 @@ export class DeviceService {
 						) {
 							if (config == ConfigType.actions) {
 								// This will indicate last action from device
-								if (payload.configCtrl.option == ConfigType.actions) {
-									// Another check indicating no more actions
-									if (!payload.commControl.isWait) {
-										resolve(actionData);
-									}
-								} else if(payload.configCtrl.option == ConfigType.delay) {
-									lastAction.delay = payload.data;
-									
-									if (!payload.commControl.isWait) {
-										resolve(actionData);
-									}
-								} else {
-									let type;
-									let mode;
-									switch (payload.configCtrl.option) {
-										case ConfigType.actionLow:          mode = ActionMode.click;      type = ActionType.low; break;
-										case ConfigType.actionHigh:         mode = ActionMode.click;      type = ActionType.high; break;
-										case ConfigType.actionToggle:       mode = ActionMode.click;      type = ActionType.toggle; break;
-										case ConfigType.actionLongLow:      mode = ActionMode.longpress;   type = ActionType.low; break;
-										case ConfigType.actionLongHigh:     mode = ActionMode.longpress;   type = ActionType.high; break;
-										case ConfigType.actionLongToggle:   mode = ActionMode.longpress;   type = ActionType.toggle; break;
-										case ConfigType.actionDoubleLow:    mode = ActionMode.doubleclick; type = ActionType.low; break;
-										case ConfigType.actionDoubleHigh:   mode = ActionMode.doubleclick; type = ActionType.high; break;
-										case ConfigType.actionDoubleToggle: mode = ActionMode.doubleclick; type = ActionType.toggle; break;
-									}
-
-									let deviceId = payload.data >> 24;
-									if (deviceId != 0xFF) {
-										lastAction = {
-											deviceId,
-											mode,
-											type,
-											ports: this.hexToPorts(payload.data & 0xFFFF),
-											delay: 0
+								switch (payload.configCtrl.option) {
+									case ConfigType.actions:
+										// This should be last acknoweadge package
+										break;
+									case ConfigType.actionPorts:
+										lastAction.ports = this.hexToPorts(payload.data & 0xFFFF);
+										break;
+									case ConfigType.actionDelay:
+										lastAction.delay = payload.data;
+										break;
+									case ConfigType.actionLongpress:
+										lastAction.longpress = payload.data;
+										break;
+									case ConfigType.actionBase:
+										let mode: ActionMode = ActionMode.click;
+										switch ((payload.data >> 8) & 0xFF) {
+											case 0: mode = ActionMode.click; break;
+											case 1: mode = ActionMode.longpress; break;
+											case 2: mode = ActionMode.doubleclick; break;
 										}
-										actionData.push(lastAction);
-									}
+
+										let type: ActionType = ActionType.low;
+										switch (payload.data & 0xFF) {
+											case 0: type = ActionType.low; break;
+											case 1: type = ActionType.high; break;
+											case 2: type = ActionType.toggle; break;
+											case 3: type = ActionType.pwm; break;
+										}
+
+										let deviceId = payload.data >> 24;
+
+										if (deviceId != 0xFF) {
+											lastAction = {
+												deviceId,
+												mode,
+												type,
+												ports: [],
+												delay: 0,
+												longpress: 0
+											}
+											actionData.push(lastAction);
+										}
+										break;
+								}
+
+								// Another check if this is the last package
+								if (!payload.commControl.isWait) {
+									resolve(actionData);
 								}
 							} else {
 								return resolve(payload.data);

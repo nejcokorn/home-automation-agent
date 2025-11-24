@@ -8,12 +8,12 @@ export class ActionDto {
 	@Max(255)
 	deviceId: number;
 
-	@IsEnum(ActionType)
-	type: ActionType;
-
 	@IsEnum(ActionMode)
 	@IsOptional()
 	mode: ActionMode = ActionMode.click;
+
+	@IsEnum(ActionType)
+	type: ActionType;
 
 	@IsArray()
 	@ArrayMaxSize(12)
@@ -24,6 +24,9 @@ export class ActionDto {
 
 	@IsOptional()
 	delay: number = 0;
+
+	@IsOptional()
+	longpress: number = 0;
 }
 
 export class DeviceConfigDto {
@@ -50,12 +53,6 @@ export class DeviceConfigDto {
 	@Min(0)
 	@Max(16777215)
 	debounce: number;
-
-	// Number in milliseconds
-	@IsInt()
-	@Min(0)
-	@Max(16777215)
-	longpress: number;
 
 	// Number in milliseconds
 	@IsInt()

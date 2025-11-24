@@ -61,26 +61,19 @@ export enum ActionMode {
 }
 
 export enum ConfigType {
-	writeEEPROM        = 0b00000,
-	buttonRisingEdge   = 0b00001,
-	buttonFallingEdge  = 0b00010,
-	debounce           = 0b00011,
-	longpress          = 0b00100,
-	doubleclick        = 0b00101,
-	delay              = 0b00110,
-	actions            = 0b00111,
-	actionToggle       = 0b01000,
-	actionHigh         = 0b01001,
-	actionLow          = 0b01010,
-	actionLongToggle   = 0b01011,
-	actionLongHigh     = 0b01100,
-	actionLongLow      = 0b01101,
-	actionDoubleToggle = 0b01110,
-	actionDoubleHigh   = 0b01111,
-	actionDoubleLow    = 0b10000,
-	bypassInstantly    = 0b10001,
-	bypassOnDIPSwitch  = 0b10010,
-	bypassOnDisconnect = 0b10011
+	writeEEPROM             = 0b00000000, // Write all configuration into EEPROM
+	buttonRisingEdge        = 0b00000001, // Input acts as a Button on rising edge
+	buttonFallingEdge       = 0b00000010, // Input acts as a Button on falling edge
+	debounce                = 0b00000011, // Debounce in microseconds
+	doubleclick             = 0b00000100, // Double-click in milliseconds
+	actions                 = 0b00000101, // Get/Reset all actions
+	actionBase              = 0b00000110, // Action P1 deviceId (B5), mode (B7), type (B8)
+	actionPorts             = 0b00000111, // Action P2 ports (map)
+	actionDelay             = 0b00001000, // Action P3 delay in milliseconds
+	actionLongpress         = 0b00001001, // Action P4 longpress in milliseconds
+	bypassInstantly         = 0b00001010, // Bypass Instantly
+	bypassOnDIPSwitch       = 0b00001011, // Bypass determined by DIP switch
+	bypassOnDisconnect      = 0b00001100, // Bypass on disconnect in milliseconds
 }
 
 
