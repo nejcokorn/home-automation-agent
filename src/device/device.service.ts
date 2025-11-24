@@ -109,16 +109,16 @@ export class DeviceService {
 		return await new ExtraPromise((resolve, reject) => {
 			let data: any;
 			switch (options.type) {
-				case ActionType.LOW:
+				case ActionType.low:
 					data = 0;
 					break;
-				case ActionType.HIGH:
+				case ActionType.high:
 					data = 1;
 					break;
-				case ActionType.TOGGLE:
+				case ActionType.toggle:
 					data = 2;
 					break;
-				case ActionType.PWM:
+				case ActionType.pwm:
 					data = 3;
 					break;
 			}
@@ -293,25 +293,25 @@ export class DeviceService {
 							let data = action.deviceId << 24 | this.portsToHex(action.ports);
 							let configType;
 							switch (action.mode) {
-								case ActionMode.CLICK:
+								case ActionMode.click:
 									switch (action.type) {
-										case ActionType.LOW: configType = ConfigType[ConfigType.actionLow]; break;
-										case ActionType.HIGH: configType = ConfigType[ConfigType.actionHigh]; break;
-										case ActionType.TOGGLE: configType = ConfigType[ConfigType.actionToggle]; break;
+										case ActionType.low: configType = ConfigType[ConfigType.actionLow]; break;
+										case ActionType.high: configType = ConfigType[ConfigType.actionHigh]; break;
+										case ActionType.toggle: configType = ConfigType[ConfigType.actionToggle]; break;
 									}
 									break;
-								case ActionMode.LONGPRESS:
+								case ActionMode.longpress:
 									switch (action.type) {
-										case ActionType.LOW: configType = ConfigType[ConfigType.actionLongLow]; break;
-										case ActionType.HIGH: configType = ConfigType[ConfigType.actionLongHigh]; break;
-										case ActionType.TOGGLE: configType = ConfigType[ConfigType.actionLongToggle]; break;
+										case ActionType.low: configType = ConfigType[ConfigType.actionLongLow]; break;
+										case ActionType.high: configType = ConfigType[ConfigType.actionLongHigh]; break;
+										case ActionType.toggle: configType = ConfigType[ConfigType.actionLongToggle]; break;
 									}
 									break;
-								case ActionMode.DOUBLECLICK:
+								case ActionMode.doubleclick:
 									switch (action.type) {
-										case ActionType.LOW: configType = ConfigType[ConfigType.actionDoubleLow]; break;
-										case ActionType.HIGH: configType = ConfigType[ConfigType.actionDoubleHigh]; break;
-										case ActionType.TOGGLE: configType = ConfigType[ConfigType.actionDoubleToggle]; break;
+										case ActionType.low: configType = ConfigType[ConfigType.actionDoubleLow]; break;
+										case ActionType.high: configType = ConfigType[ConfigType.actionDoubleHigh]; break;
+										case ActionType.toggle: configType = ConfigType[ConfigType.actionDoubleToggle]; break;
 									}
 									break;
 							}
@@ -437,15 +437,15 @@ export class DeviceService {
 									let type;
 									let mode;
 									switch (payload.configCtrl.option) {
-										case ConfigType.actionLow:          mode = ActionMode.CLICK;      type = ActionType.LOW; break;
-										case ConfigType.actionHigh:         mode = ActionMode.CLICK;      type = ActionType.HIGH; break;
-										case ConfigType.actionToggle:       mode = ActionMode.CLICK;      type = ActionType.TOGGLE; break;
-										case ConfigType.actionLongLow:      mode = ActionMode.LONGPRESS;   type = ActionType.LOW; break;
-										case ConfigType.actionLongHigh:     mode = ActionMode.LONGPRESS;   type = ActionType.HIGH; break;
-										case ConfigType.actionLongToggle:   mode = ActionMode.LONGPRESS;   type = ActionType.TOGGLE; break;
-										case ConfigType.actionDoubleLow:    mode = ActionMode.DOUBLECLICK; type = ActionType.LOW; break;
-										case ConfigType.actionDoubleHigh:   mode = ActionMode.DOUBLECLICK; type = ActionType.HIGH; break;
-										case ConfigType.actionDoubleToggle: mode = ActionMode.DOUBLECLICK; type = ActionType.TOGGLE; break;
+										case ConfigType.actionLow:          mode = ActionMode.click;      type = ActionType.low; break;
+										case ConfigType.actionHigh:         mode = ActionMode.click;      type = ActionType.high; break;
+										case ConfigType.actionToggle:       mode = ActionMode.click;      type = ActionType.toggle; break;
+										case ConfigType.actionLongLow:      mode = ActionMode.longpress;   type = ActionType.low; break;
+										case ConfigType.actionLongHigh:     mode = ActionMode.longpress;   type = ActionType.high; break;
+										case ConfigType.actionLongToggle:   mode = ActionMode.longpress;   type = ActionType.toggle; break;
+										case ConfigType.actionDoubleLow:    mode = ActionMode.doubleclick; type = ActionType.low; break;
+										case ConfigType.actionDoubleHigh:   mode = ActionMode.doubleclick; type = ActionType.high; break;
+										case ConfigType.actionDoubleToggle: mode = ActionMode.doubleclick; type = ActionType.toggle; break;
 									}
 
 									let deviceId = payload.data >> 24;
@@ -541,7 +541,7 @@ export class DeviceService {
 							delay = {
 								deviceId: (payload.data & 0xFF000000) >> 24,
 								port: payload.port,
-								type: (payload.data & 0xFF) == 0 ? ActionType.LOW : (payload.data & 0xFF) == 1 ? ActionType.HIGH : ActionType.TOGGLE,
+								type: (payload.data & 0xFF) == 0 ? ActionType.low : (payload.data & 0xFF) == 1 ? ActionType.high : ActionType.toggle,
 								delay: 0,
 							}
 						} else {

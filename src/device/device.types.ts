@@ -48,16 +48,16 @@ export enum DataType {
 }
 
 export enum ActionType {
-	LOW    = 'low',
-	HIGH   = 'high',
-	TOGGLE = 'toggle',
-	PWM    = 'pwm',
+	low    = 'low',
+	high   = 'high',
+	toggle = 'toggle',
+	pwm    = 'pwm',
 }
 
 export enum ActionMode {
-	CLICK      = 'click',
-	LONGPRESS   = 'longpress',
-	DOUBLECLICK = 'doubleclick'
+	click      = 'click',
+	longpress   = 'longpress',
+	doubleclick = 'doubleclick'
 }
 
 export enum ConfigType {

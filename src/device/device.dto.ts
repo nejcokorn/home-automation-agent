@@ -13,7 +13,7 @@ export class ActionDto {
 
 	@IsEnum(ActionMode)
 	@IsOptional()
-	mode: ActionMode = ActionMode.CLICK;
+	mode: ActionMode = ActionMode.click;
 
 	@IsArray()
 	@ArrayMaxSize(12)
