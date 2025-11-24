@@ -55,7 +55,7 @@ export enum ActionType {
 }
 
 export enum ActionMode {
-	NORMAL      = 'normal',
+	CLICK      = 'click',
 	LONGPRESS   = 'longpress',
 	DOUBLECLICK = 'doubleclick'
 }

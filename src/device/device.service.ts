@@ -293,7 +293,7 @@ export class DeviceService {
 							let data = action.deviceId << 24 | this.portsToHex(action.ports);
 							let configType;
 							switch (action.mode) {
-								case ActionMode.NORMAL:
+								case ActionMode.CLICK:
 									switch (action.type) {
 										case ActionType.LOW: configType = ConfigType[ConfigType.actionLow]; break;
 										case ActionType.HIGH: configType = ConfigType[ConfigType.actionHigh]; break;
@@ -437,9 +437,9 @@ export class DeviceService {
 									let type;
 									let mode;
 									switch (payload.configCtrl.option) {
-										case ConfigType.actionLow:          mode = ActionMode.NORMAL;      type = ActionType.LOW; break;
-										case ConfigType.actionHigh:         mode = ActionMode.NORMAL;      type = ActionType.HIGH; break;
-										case ConfigType.actionToggle:       mode = ActionMode.NORMAL;      type = ActionType.TOGGLE; break;
+										case ConfigType.actionLow:          mode = ActionMode.CLICK;      type = ActionType.LOW; break;
+										case ConfigType.actionHigh:         mode = ActionMode.CLICK;      type = ActionType.HIGH; break;
+										case ConfigType.actionToggle:       mode = ActionMode.CLICK;      type = ActionType.TOGGLE; break;
 										case ConfigType.actionLongLow:      mode = ActionMode.LONGPRESS;   type = ActionType.LOW; break;
 										case ConfigType.actionLongHigh:     mode = ActionMode.LONGPRESS;   type = ActionType.HIGH; break;
 										case ConfigType.actionLongToggle:   mode = ActionMode.LONGPRESS;   type = ActionType.TOGGLE; break;
