@@ -45,12 +45,6 @@ export class DeviceConfigDto {
 	@Max(1)
 	buttonFallingEdge: number;
 
-	// Switch state (e.g., 0/1)
-	@IsInt()
-	@Min(0)
-	@Max(1)
-	switch: number;
-
 	// Number in microseconds
 	@IsInt()
 	@Min(0)

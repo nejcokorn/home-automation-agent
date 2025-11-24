@@ -12,7 +12,6 @@ type Unsubscribe = () => void;
 const generalConfigs = [
 	ConfigType.buttonRisingEdge,
 	ConfigType.buttonFallingEdge,
-	ConfigType.switch,
 	ConfigType.debounce,
 	ConfigType.longpress,
 	ConfigType.doubleclick,
