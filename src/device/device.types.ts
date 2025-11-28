@@ -47,33 +47,40 @@ export enum DataType {
 	Float = 0b11,
 }
 
+// Action types
+export enum ActionTrigger {
+	disabled     = 'disabled',
+	rising       = 'rising',
+	falling      = 'falling',
+}
+
 export enum ActionType {
-	low    = 'low',
-	high   = 'high',
-	toggle = 'toggle',
-	pwm    = 'pwm',
+	low          = 'low',
+	high         = 'high',
+	toggle       = 'toggle',
+	pwm          = 'pwm',
 }
 
 export enum ActionMode {
-	click      = 'click',
+	click       = 'click',
 	longpress   = 'longpress',
-	doubleclick = 'doubleclick'
+	doubleclick = 'doubleclick',
 }
 
 export enum ConfigType {
-	writeEEPROM             = 0b00000000, // Write all configuration into EEPROM
-	buttonRisingEdge        = 0b00000001, // Input acts as a Button on rising edge
-	buttonFallingEdge       = 0b00000010, // Input acts as a Button on falling edge
-	debounce                = 0b00000011, // Debounce in microseconds
-	doubleclick             = 0b00000100, // Double-click in milliseconds
-	actions                 = 0b00000101, // Get/Reset all actions
-	actionBase              = 0b00000110, // Action P1 deviceId (B5), mode (B7), type (B8)
-	actionPorts             = 0b00000111, // Action P2 ports (map)
-	actionDelay             = 0b00001000, // Action P3 delay in milliseconds
-	actionLongpress         = 0b00001001, // Action P4 longpress in milliseconds
-	bypassInstantly         = 0b00001010, // Bypass Instantly
-	bypassOnDIPSwitch       = 0b00001011, // Bypass determined by DIP switch
-	bypassOnDisconnect      = 0b00001100, // Bypass on disconnect in milliseconds
+	writeEEPROM         = 0x01, // Write all configuration into EEPROM
+	debounce            = 0x02, // Debounce in microseconds
+	doubleclick         = 0x03, // Double-click in milliseconds
+	actions             = 0x04, // Get/Reset all actions
+	actionBase          = 0x05, // Action P1 deviceId (B5), trigger (B6), mode (B7), type (B8)
+	actionPorts         = 0x06, // Action P2 ports (map)
+	actionSkipWhenDelay = 0x07, // Action P3 skip action if delay is present in any of the output ports (map)
+	actionClearDelays   = 0x08, // Action P4 clear all delays on all specified output ports (map)
+	actionDelay         = 0x09, // Action P5 delay in milliseconds
+	actionLongpress     = 0x0A, // Action P6 longpress in milliseconds
+	bypassInstantly     = 0x0B, // Bypass Instantly
+	bypassOnDIPSwitch   = 0x0C, // Bypass determined by DIP switch
+	bypassOnDisconnect  = 0x0D, // Bypass on disconnect in milliseconds
 }
 
 

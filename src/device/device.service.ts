@@ -1,6 +1,6 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from "@nestjs/common";
+import { Injectable } from "@nestjs/common";
 import { Can, CanFrame } from "src/can/can.types";
-import { CommControl, DataControl, ConfigControl, ConfigType, DeviceFrame, ActionType, ActionMode } from "src/device/device.types";
+import { CommControl, DataControl, ConfigControl, ConfigType, DeviceFrame, ActionType, ActionMode, ActionTrigger } from "src/device/device.types";
 import { LoggerExtra } from "src/extras/logger.extra";
 import { ExtraPromise } from "src/extras/promise.extra";
 import { CanService } from "src/can/can.service";
@@ -10,8 +10,6 @@ type Unsubscribe = () => void;
 
 // Gropu of general configurations
 const generalConfigs = [
-	ConfigType.buttonRisingEdge,
-	ConfigType.buttonFallingEdge,
 	ConfigType.debounce,
 	ConfigType.doubleclick,
 	ConfigType.actions,
@@ -27,6 +25,44 @@ const actionConfigs = [
 	ConfigType.actionDelay,
 	ConfigType.actionLongpress,
 ]
+
+const numToActionTrigger = {
+	0: 'disabled',
+	1: 'rising',
+	2: 'falling',
+}
+
+const actionTriggerToNum = {
+	'disabled': 0,
+	'rising':   1,
+	'falling':  2,
+}
+
+const numToActionType = {
+	0: 'low',
+	1: 'high',
+	2: 'toggle',
+	3: 'pwm',
+}
+
+const actionTypeToNum = {
+	low:          0,
+	high:         1,
+	toggle:       2,
+	pwm:          3,
+}
+
+const actionModeToNum = {
+	click:       0,
+	longpress:   1,
+	doubleclick: 2,
+}
+
+const numToActionMode = {
+	0: 'click',
+	1: 'longpress',
+	2: 'doubleclick',
+}
 
 @Injectable()
 export class DeviceService {
@@ -100,22 +136,8 @@ export class DeviceService {
 		let unsubscribe: Unsubscribe = () => {};
 		
 		return await new ExtraPromise((resolve, reject) => {
-			let data: any;
-			switch (options.type) {
-				case ActionType.low:
-					data = 0;
-					break;
-				case ActionType.high:
-					data = 1;
-					break;
-				case ActionType.toggle:
-					data = 2;
-					break;
-				case ActionType.pwm:
-					data = 3;
-					break;
-			}
-			let buf : Buffer = Buffer.alloc(8);
+			let type: number = actionTypeToNum[options.type];
+			let buf: Buffer = Buffer.alloc(8);
 			let commControl : number = CommControl.commandBit | (options.extra !== undefined || options.delay > 0 ? CommControl.waitBit : CommControl.empty);
 			let dataCtrl : number =
 				DataControl.set
@@ -126,7 +148,7 @@ export class DeviceService {
 			buf[1] = commControl;
 			buf[2] = dataCtrl;
 			buf[3] = options.portId;
-			Buffer.from([data >> 24, data >> 16, data >> 8, data]).copy(buf, 4);
+			Buffer.from([type >> 24, type >> 16, type >> 8, type]).copy(buf, 4);
 
 			unsubscribe = this.canService.subscribe((can: Can, frame: CanFrame) => {
 				let payload = this.parseFrame(frame);
@@ -283,27 +305,16 @@ export class DeviceService {
 
 						// Loop thorugh set of actions
 						for (const action of inputConfig[configType]) {
-							let type: number = 0;
-							switch (action.type) {
-								case ActionType.low: type = 0; break;
-								case ActionType.high: type = 1; break;
-								case ActionType.toggle: type = 2; break;
-								case ActionType.pwm: type = 3; break;
-							}
-
-							let mode: number = 0;
-							switch (action.mode) {
-								case ActionMode.click: mode = 0; break;
-								case ActionMode.longpress: mode = 1; break;
-								case ActionMode.doubleclick: mode = 2; break;
-							}
+							let trigger: number = actionTriggerToNum[action.trigger];
+							let type: number = actionTypeToNum[action.type];
+							let mode: number = actionModeToNum[action.mode];
 
 							// P1 - action base
 							await this.sendConfig({
 								...options,
 								inputPortIdx: inputConfig.inputPortIdx,
 								configType: ConfigType[ConfigType.actionBase],
-								data: action.deviceId << 24 | mode << 8 | type
+								data: action.deviceId << 24 | trigger << 16 | mode << 8 | type
 							});
 
 							// P2 - action ports
@@ -434,26 +445,15 @@ export class DeviceService {
 										lastAction.longpress = payload.data;
 										break;
 									case ConfigType.actionBase:
-										let mode: ActionMode = ActionMode.click;
-										switch ((payload.data >> 8) & 0xFF) {
-											case 0: mode = ActionMode.click; break;
-											case 1: mode = ActionMode.longpress; break;
-											case 2: mode = ActionMode.doubleclick; break;
-										}
-
-										let type: ActionType = ActionType.low;
-										switch (payload.data & 0xFF) {
-											case 0: type = ActionType.low; break;
-											case 1: type = ActionType.high; break;
-											case 2: type = ActionType.toggle; break;
-											case 3: type = ActionType.pwm; break;
-										}
-
 										let deviceId = payload.data >> 24;
+										let trigger: ActionTrigger = numToActionTrigger[(payload.data >> 16) & 0xFF];
+										let mode: ActionMode = numToActionMode[(payload.data >> 8) & 0xFF];
+										let type: ActionType = numToActionType[(payload.data & 0xFF)];
 
 										if (deviceId != 0xFF) {
 											lastAction = {
 												deviceId,
+												trigger,
 												mode,
 												type,
 												ports: [],
@@ -550,7 +550,7 @@ export class DeviceService {
 							delay = {
 								deviceId: (payload.data & 0xFF000000) >> 24,
 								port: payload.port,
-								type: (payload.data & 0xFF) == 0 ? ActionType.low : (payload.data & 0xFF) == 1 ? ActionType.high : ActionType.toggle,
+								type: numToActionType[(payload.data & 0xFF)],
 								delay: 0,
 							}
 						} else {

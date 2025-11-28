@@ -1,12 +1,16 @@
 import { IsOptional, IsDefined, IsArray, IsInt, IsEnum, IsBoolean, Max, Min, ValidateNested, ArrayMaxSize } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ActionType, ActionMode } from 'src/device/device.types';
+import { ActionTrigger, ActionMode, ActionType } from 'src/device/device.types';
 
 export class ActionDto {
 	@IsInt()
 	@Min(0)
 	@Max(255)
 	deviceId: number;
+
+	@IsEnum(ActionTrigger)
+	@IsOptional()
+	trigger: ActionTrigger = ActionTrigger.disabled;
 
 	@IsEnum(ActionMode)
 	@IsOptional()
@@ -35,18 +39,6 @@ export class DeviceConfigDto {
 	@Min(0)
 	@Max(15)
 	inputPortIdx: number;
-
-	// Button press states (e.g., 0/1)
-	@IsInt()
-	@Min(0)
-	@Max(1)
-	buttonRisingEdge: number;
-
-	// Button press states (e.g., 0/1)
-	@IsInt()
-	@Min(0)
-	@Max(1)
-	buttonFallingEdge: number;
 
 	// Number in microseconds
 	@IsInt()
