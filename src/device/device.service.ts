@@ -23,7 +23,7 @@ const actionConfigs = [
 	ConfigType.actionBase,
 	ConfigType.actionPorts,
 	ConfigType.actionSkipWhenDelay,
-	ConfigType.actionClearDelay,
+	ConfigType.actionClearDelays,
 	ConfigType.actionDelay,
 	ConfigType.actionLongpress,
 ]
@@ -339,8 +339,8 @@ export class DeviceService {
 							await this.sendConfig({
 								...options,
 								inputPortIdx: inputConfig.inputPortIdx,
-								configType: ConfigType[ConfigType.actionClearDelay],
-								data: this.portsToHex(action.output.clearDelay)
+								configType: ConfigType[ConfigType.actionClearDelays],
+								data: this.portsToHex(action.output.clearDelays)
 							});
 
 							// P5 - action delay
@@ -459,8 +459,8 @@ export class DeviceService {
 									case ConfigType.actionSkipWhenDelay:
 										lastAction.output.skipWhenDelay = this.hexToPorts(payload.data & 0xFFFF);
 										break;
-									case ConfigType.actionClearDelay:
-										lastAction.output.clearDelay = this.hexToPorts(payload.data & 0xFFFF);
+									case ConfigType.actionClearDelays:
+										lastAction.output.clearDelays = this.hexToPorts(payload.data & 0xFFFF);
 										break;
 									case ConfigType.actionDelay:
 										lastAction.output.delay = payload.data;
@@ -484,7 +484,7 @@ export class DeviceService {
 												output: {
 													ports: [],
 													skipWhenDelay: [],
-													clearDelay: [],
+													clearDelays: [],
 													delay: 0,
 												}
 											}

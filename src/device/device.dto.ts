@@ -22,7 +22,7 @@ export class ActionDtoOutput {
 	@IsInt({ each: true })
 	@Min(0, { each: true })
 	@Max(11, { each: true })
-	clearDelay: number[];
+	clearDelays: number[];
 
 	@IsOptional()
 	delay: number = 0;
@@ -49,7 +49,7 @@ export class ActionDto {
 	longpress: number = 0;
 
 	@Type(() => ActionDtoOutput)
-	@IsDefined()
+	@ValidateNested({ each: true })
 	output: ActionDtoOutput;
 }
 

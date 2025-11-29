@@ -75,7 +75,7 @@ export enum ConfigType {
 	actionBase          = 0x04, // Action P1 deviceId (B5), trigger (B6), mode (B7), type (B8)
 	actionPorts         = 0x05, // Action P2 ports (map)
 	actionSkipWhenDelay = 0x06, // Action P3 skip action if delay is present in any of the output ports (map)
-	actionClearDelay    = 0x07, // Action P4 clear all delays on all specified output ports (map)
+	actionClearDelays    = 0x07, // Action P4 clear all delays on all specified output ports (map)
 	actionDelay         = 0x08, // Action P5 delay in milliseconds
 	actionLongpress     = 0x09, // Action P6 longpress in milliseconds
 	bypassInstantly     = 0x0A, // Bypass Instantly
