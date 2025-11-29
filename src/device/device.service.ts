@@ -74,12 +74,12 @@ export class DeviceService {
 	private listeners = new Set<(event: DeviceFrame) => void>();
 	private timeout = {
 		command: 10,
-		config: 5000,
+		config: 2000,
 		configSingle: 25,
 		grace: 70,
 		ping: 100,
 		discover: 100,
-		EEPROM: 60000, // Long operation - timeout after 1 min (usually between 30 sec and 1 min)
+		EEPROM: 1000,
 		listDelays: 1000
 	}
 
