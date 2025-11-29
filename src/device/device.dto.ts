@@ -2,6 +2,32 @@ import { IsOptional, IsDefined, IsArray, IsInt, IsEnum, IsBoolean, Max, Min, Val
 import { Type } from 'class-transformer';
 import { ActionTrigger, ActionMode, ActionType } from 'src/device/device.types';
 
+export class ActionDtoOutput {
+	@IsArray()
+	@ArrayMaxSize(12)
+	@IsInt({ each: true })
+	@Min(0, { each: true })
+	@Max(11, { each: true })
+	ports: number[];
+
+	@IsArray()
+	@ArrayMaxSize(12)
+	@IsInt({ each: true })
+	@Min(0, { each: true })
+	@Max(11, { each: true })
+	skipWhenDelay: number[];
+
+	@IsArray()
+	@ArrayMaxSize(12)
+	@IsInt({ each: true })
+	@Min(0, { each: true })
+	@Max(11, { each: true })
+	clearDelay: number[];
+
+	@IsOptional()
+	delay: number = 0;
+}
+
 export class ActionDto {
 	@IsInt()
 	@Min(0)
@@ -19,18 +45,12 @@ export class ActionDto {
 	@IsEnum(ActionType)
 	type: ActionType;
 
-	@IsArray()
-	@ArrayMaxSize(12)
-	@IsInt({ each: true })
-	@Min(0, { each: true })
-	@Max(11, { each: true })
-	ports: number[];
-
-	@IsOptional()
-	delay: number = 0;
-
 	@IsOptional()
 	longpress: number = 0;
+
+	@Type(() => ActionDtoOutput)
+	@IsDefined()
+	output: ActionDtoOutput;
 }
 
 export class DeviceConfigDto {

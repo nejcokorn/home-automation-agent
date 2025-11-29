@@ -68,19 +68,19 @@ export enum ActionMode {
 }
 
 export enum ConfigType {
-	writeEEPROM         = 0x01, // Write all configuration into EEPROM
-	debounce            = 0x02, // Debounce in microseconds
-	doubleclick         = 0x03, // Double-click in milliseconds
-	actions             = 0x04, // Get/Reset all actions
-	actionBase          = 0x05, // Action P1 deviceId (B5), trigger (B6), mode (B7), type (B8)
-	actionPorts         = 0x06, // Action P2 ports (map)
-	actionSkipWhenDelay = 0x07, // Action P3 skip action if delay is present in any of the output ports (map)
-	actionClearDelays   = 0x08, // Action P4 clear all delays on all specified output ports (map)
-	actionDelay         = 0x09, // Action P5 delay in milliseconds
-	actionLongpress     = 0x0A, // Action P6 longpress in milliseconds
-	bypassInstantly     = 0x0B, // Bypass Instantly
-	bypassOnDIPSwitch   = 0x0C, // Bypass determined by DIP switch
-	bypassOnDisconnect  = 0x0D, // Bypass on disconnect in milliseconds
+	writeEEPROM         = 0x00, // Write all configuration into EEPROM
+	debounce            = 0x01, // Debounce in microseconds
+	doubleclick         = 0x02, // Double-click in milliseconds
+	actions             = 0x03, // Get/Reset all actions
+	actionBase          = 0x04, // Action P1 deviceId (B5), trigger (B6), mode (B7), type (B8)
+	actionPorts         = 0x05, // Action P2 ports (map)
+	actionSkipWhenDelay = 0x06, // Action P3 skip action if delay is present in any of the output ports (map)
+	actionClearDelay    = 0x07, // Action P4 clear all delays on all specified output ports (map)
+	actionDelay         = 0x08, // Action P5 delay in milliseconds
+	actionLongpress     = 0x09, // Action P6 longpress in milliseconds
+	bypassInstantly     = 0x0A, // Bypass Instantly
+	bypassOnDIPSwitch   = 0x0B, // Bypass determined by DIP switch
+	bypassOnDisconnect  = 0x0C, // Bypass on disconnect in milliseconds
 }
 
 

@@ -22,6 +22,8 @@ const generalConfigs = [
 const actionConfigs = [
 	ConfigType.actionBase,
 	ConfigType.actionPorts,
+	ConfigType.actionSkipWhenDelay,
+	ConfigType.actionClearDelay,
 	ConfigType.actionDelay,
 	ConfigType.actionLongpress,
 ]
@@ -322,18 +324,34 @@ export class DeviceService {
 								...options,
 								inputPortIdx: inputConfig.inputPortIdx,
 								configType: ConfigType[ConfigType.actionPorts],
-								data: this.portsToHex(action.ports)
+								data: this.portsToHex(action.output.ports)
 							});
 
-							// P3 - action delay
+							// P3 - action ports
+							await this.sendConfig({
+								...options,
+								inputPortIdx: inputConfig.inputPortIdx,
+								configType: ConfigType[ConfigType.actionSkipWhenDelay],
+								data: this.portsToHex(action.output.skipWhenDelay)
+							});
+
+							// P4 - action ports
+							await this.sendConfig({
+								...options,
+								inputPortIdx: inputConfig.inputPortIdx,
+								configType: ConfigType[ConfigType.actionClearDelay],
+								data: this.portsToHex(action.output.clearDelay)
+							});
+
+							// P5 - action delay
 							await this.sendConfig({
 								...options,
 								inputPortIdx: inputConfig.inputPortIdx,
 								configType: ConfigType[ConfigType.actionDelay],
-								data: action.delay
+								data: action.output.delay
 							});
 
-							// P4 - action longpress
+							// P6 - action longpress
 							await this.sendConfig({
 								...options,
 								inputPortIdx: inputConfig.inputPortIdx,
@@ -436,10 +454,16 @@ export class DeviceService {
 										// This should be last acknoweadge package
 										break;
 									case ConfigType.actionPorts:
-										lastAction.ports = this.hexToPorts(payload.data & 0xFFFF);
+										lastAction.output.ports = this.hexToPorts(payload.data & 0xFFFF);
+										break;
+									case ConfigType.actionSkipWhenDelay:
+										lastAction.output.skipWhenDelay = this.hexToPorts(payload.data & 0xFFFF);
+										break;
+									case ConfigType.actionClearDelay:
+										lastAction.output.clearDelay = this.hexToPorts(payload.data & 0xFFFF);
 										break;
 									case ConfigType.actionDelay:
-										lastAction.delay = payload.data;
+										lastAction.output.delay = payload.data;
 										break;
 									case ConfigType.actionLongpress:
 										lastAction.longpress = payload.data;
@@ -456,9 +480,13 @@ export class DeviceService {
 												trigger,
 												mode,
 												type,
-												ports: [],
-												delay: 0,
-												longpress: 0
+												longpress: 0,
+												output: {
+													ports: [],
+													skipWhenDelay: [],
+													clearDelay: [],
+													delay: 0,
+												}
 											}
 											actionData.push(lastAction);
 										}
