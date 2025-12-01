@@ -561,8 +561,9 @@ export class DeviceService {
 			let buf : Buffer = Buffer.alloc(8);
 			let commControl : number = CommControl.commandBit;
 			let dataCtrl : number = DataControl.listDelays;
-			let delays: { deviceId: number, delay: number, port:number, type: ActionType }[] = [];
-			let delay: { deviceId: number, delay: number, port:number, type: ActionType };
+			let delays: { id: number, deviceId: number, delay: number, port:number, type: ActionType }[] = [];
+			let delay: { id: number, deviceId: number, delay: number, port:number, type: ActionType };
+			let packageNum = 1;
 			buf[0] = this.canAddresses.listDelays;
 			buf[1] = commControl;
 			buf[2] = dataCtrl;
@@ -574,18 +575,28 @@ export class DeviceService {
 					&& payload.dataCtrl.isListDelays == true
 				) {
 					if (payload.commControl.isWait) {
-						if (payload.port != 0xFF) {
-							delay = {
-								deviceId: (payload.data & 0xFF000000) >> 24,
-								port: payload.port,
-								type: numToActionType[(payload.data & 0xFF)],
-								delay: 0,
-							}
-						} else {
-							delay.delay = payload.data
-							delays.push(delay);
+						switch (packageNum) {
+							case 1:
+								delay = {
+									id: payload.data,
+									deviceId: 0xFF,
+									port: payload.port,
+									type: ActionType.low,
+									delay: 0,
+								}
+							case 2:
+								delay.deviceId = payload.data;
+								break;
+							case 3:
+								delay.type = numToActionType[(payload.data & 0xFF)]
+								break;
+							case 4:
+								delay.delay = payload.data;
+								delays.push(delay);
+								packageNum = 0;
+								break;
 						}
-
+						packageNum++;
 					} else {
 						resolve(delays);
 					}
