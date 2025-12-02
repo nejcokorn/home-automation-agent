@@ -1,6 +1,6 @@
 // Class representing a timeout error
 export class TimeoutError extends Error {
-	constructor(message = "Operation timed out") {
+	constructor(message = "Operation timed out!") {
 		super(message);
 		this.name = "TimeoutError";
 	}
@@ -23,14 +23,17 @@ export class ExtraPromise<T> extends Promise<T> {
 
 	// Add a timeout to the Promise
 	timeout(ms: number): Promise<T> {
+		let timer: NodeJS.Timeout | null = null;
+
 		const timeoutPromise = new Promise<never>((_, reject) => {
-			// const id = setTimeout(() => reject(new TimeoutError()), ms);
-			const id = setTimeout(() => reject("Operation timed out"), ms);
-			// Clear the timer when the promise settles
-			this.finally(() => clearTimeout(id));
+			timer = setTimeout(() => reject(new TimeoutError()), ms);
 		});
 
 		// Return whichever settles first (result or timeout)
-		return Promise.race([this, timeoutPromise]) as Promise<T>;
+		return Promise.race([this, timeoutPromise])
+			.finally(() => {
+				// Clear the timer when the promise settles
+				if (timer) clearTimeout(timer);
+			});
 	}
 }
