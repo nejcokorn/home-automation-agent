@@ -3,6 +3,39 @@ import { Type } from 'class-transformer';
 import { ActionTrigger, ActionMode, ActionType } from 'src/device/device.types';
 
 export class ActionDtoOutput {
+	@IsInt()
+	@Min(0)
+	@Max(255)
+	@IsOptional()
+	skipWhenDelayDeviceId: number | null = null
+
+	@IsArray()
+	@ArrayMaxSize(12)
+	@IsInt({ each: true })
+	@Min(0, { each: true })
+	@Max(11, { each: true })
+	@IsOptional()
+	skipWhenDelayPorts: number[] = [];
+
+	@IsInt()
+	@Min(0)
+	@Max(255)
+	@IsOptional()
+	clearDelayDeviceId: number | null = null
+
+	@IsArray()
+	@ArrayMaxSize(12)
+	@IsInt({ each: true })
+	@Min(0, { each: true })
+	@Max(11, { each: true })
+	@IsOptional()
+	clearDelayPorts: number[] = [];
+
+	@IsInt()
+	@Min(0)
+	@Max(255)
+	deviceId: number;
+
 	@IsArray()
 	@ArrayMaxSize(12)
 	@IsInt({ each: true })
@@ -10,30 +43,11 @@ export class ActionDtoOutput {
 	@Max(11, { each: true })
 	ports: number[];
 
-	@IsArray()
-	@ArrayMaxSize(12)
-	@IsInt({ each: true })
-	@Min(0, { each: true })
-	@Max(11, { each: true })
-	skipWhenDelay: number[];
-
-	@IsArray()
-	@ArrayMaxSize(12)
-	@IsInt({ each: true })
-	@Min(0, { each: true })
-	@Max(11, { each: true })
-	clearDelays: number[];
-
 	@IsOptional()
 	delay: number = 0;
 }
 
 export class ActionDto {
-	@IsInt()
-	@Min(0)
-	@Max(255)
-	deviceId: number;
-
 	@IsEnum(ActionTrigger)
 	@IsOptional()
 	trigger: ActionTrigger = ActionTrigger.disabled;

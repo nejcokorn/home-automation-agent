@@ -318,7 +318,7 @@ export class DeviceService {
 								...options,
 								inputPortIdx: inputConfig.inputPortIdx,
 								configType: ConfigType[ConfigType.actionBase],
-								data: action.deviceId << 24 | trigger << 16 | mode << 8 | type
+								data: trigger << 16 | mode << 8 | type
 							});
 
 							// P2 - action ports
@@ -326,7 +326,7 @@ export class DeviceService {
 								...options,
 								inputPortIdx: inputConfig.inputPortIdx,
 								configType: ConfigType[ConfigType.actionPorts],
-								data: this.portsToHex(action.output.ports)
+								data: (action.output.deviceId ? action.output.deviceId : 0xFF) << 24 | this.portsToHex(action.output.ports)
 							});
 
 							// P3 - action ports
@@ -334,7 +334,7 @@ export class DeviceService {
 								...options,
 								inputPortIdx: inputConfig.inputPortIdx,
 								configType: ConfigType[ConfigType.actionSkipWhenDelay],
-								data: this.portsToHex(action.output.skipWhenDelay)
+								data: (action.output.skipWhenDelayDeviceId ? action.output.skipWhenDelayDeviceId : 0xFF) << 24 | this.portsToHex(action.output.skipWhenDelayPorts)
 							});
 
 							// P4 - action ports
@@ -342,7 +342,7 @@ export class DeviceService {
 								...options,
 								inputPortIdx: inputConfig.inputPortIdx,
 								configType: ConfigType[ConfigType.actionClearDelays],
-								data: this.portsToHex(action.output.clearDelays)
+								data: (action.output.clearDelayDeviceId ? action.output.clearDelayDeviceId : 0xFF) << 24 | this.portsToHex(action.output.clearDelayPorts)
 							});
 
 							// P5 - action delay
@@ -456,13 +456,18 @@ export class DeviceService {
 										// This should be last acknoweadge package
 										break;
 									case ConfigType.actionPorts:
-										lastAction.output.ports = this.hexToPorts(payload.data & 0xFFFF);
+										lastAction.output.deviceId = payload.data >>> 24;
+										lastAction.output.ports = this.hexToPorts(payload.data & 0xFFF);
 										break;
 									case ConfigType.actionSkipWhenDelay:
-										lastAction.output.skipWhenDelay = this.hexToPorts(payload.data & 0xFFFF);
+										let skipWhenDelayDeviceId = payload.data >>> 24;
+										lastAction.output.skipWhenDelayDeviceId = skipWhenDelayDeviceId != 0xFF ? skipWhenDelayDeviceId : null;
+										lastAction.output.skipWhenDelayPorts = this.hexToPorts(payload.data & 0xFFF);
 										break;
 									case ConfigType.actionClearDelays:
-										lastAction.output.clearDelays = this.hexToPorts(payload.data & 0xFFFF);
+										let clearDelayDeviceId = payload.data >>> 24;
+										lastAction.output.clearDelayDeviceId = clearDelayDeviceId != 0xFF ? clearDelayDeviceId : null;
+										lastAction.output.clearDelayPorts = this.hexToPorts(payload.data & 0xFFF);
 										break;
 									case ConfigType.actionDelay:
 										lastAction.output.delay = payload.data;
@@ -471,27 +476,27 @@ export class DeviceService {
 										lastAction.longpress = payload.data;
 										break;
 									case ConfigType.actionBase:
-										let deviceId = payload.data >> 24;
 										let trigger: ActionTrigger = numToActionTrigger[(payload.data >> 16) & 0xFF];
 										let mode: ActionMode = numToActionMode[(payload.data >> 8) & 0xFF];
 										let type: ActionType = numToActionType[(payload.data & 0xFF)];
 
-										if (deviceId != 0xFF) {
-											lastAction = {
-												deviceId,
-												trigger,
-												mode,
-												type,
-												longpress: 0,
-												output: {
-													ports: [],
-													skipWhenDelay: [],
-													clearDelays: [],
-													delay: 0,
-												}
+										// Set object
+										lastAction = {
+											trigger,
+											mode,
+											type,
+											longpress: 0,
+											output: {
+												skipWhenDelayDeviceId: 0xFF,
+												skipWhenDelayPorts: [],
+												clearDelayDeviceId: 0xFF,
+												clearDelayPorts: [],
+												deviceId: 0xFF,
+												ports: [],
+												delay: 0,
 											}
-											actionData.push(lastAction);
 										}
+										actionData.push(lastAction);
 										break;
 								}
 
