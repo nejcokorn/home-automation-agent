@@ -94,7 +94,8 @@ export class DeviceService {
 		writeEEPROM: 0xF6,
 		listDelays: 0xF7,
 		clearDelay: 0xF8,
-		broadcast: 0x0FF,
+		broadcastInfo: 0x0FE,
+		broadcastAction: 0x0FF,
 	}
 
 	constructor(
@@ -233,7 +234,7 @@ export class DeviceService {
 					&& payload.commControl.isPing == true
 					&& payload.commControl.isAcknowledge == true
 				) {
-					if (options.deviceId != this.canAddresses.broadcast) {
+					if (options.deviceId != this.canAddresses.broadcastAction) {
 						deviceList.push(payload.from);
 					} else {
 						resolve([payload.from]);
@@ -280,7 +281,7 @@ export class DeviceService {
 			});
 
 			this.canService.send(options.iface, {
-				id: this.canAddresses.broadcast,
+				id: this.canAddresses.broadcastAction,
 				data: buf
 			});
 		})
