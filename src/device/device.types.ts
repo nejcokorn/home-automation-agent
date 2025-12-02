@@ -20,6 +20,7 @@ export enum DataControl {
 	extra         = 0x20,
 	delay         = 0x30,
 	listDelays    = 0x40,
+	clearDelay    = 0x50,
 	digital       = 0x00,
 	analog        = 0x08,
 	input         = 0x04,

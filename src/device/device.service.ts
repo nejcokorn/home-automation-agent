@@ -80,7 +80,8 @@ export class DeviceService {
 		ping: 100,
 		discover: 100,
 		EEPROM: 1000,
-		listDelays: 1000
+		listDelays: 1000,
+		clearDelay: 50,
 	}
 
 	canAddresses = {
@@ -92,6 +93,7 @@ export class DeviceService {
 		setConfig: 0xF5,
 		writeEEPROM: 0xF6,
 		listDelays: 0xF7,
+		clearDelay: 0xF8,
 		broadcast: 0x0FF,
 	}
 
@@ -609,6 +611,42 @@ export class DeviceService {
 			});
 		})
 		.timeout(this.timeout.listDelays)
+		.finally(() => {
+			unsubscribe();
+		});
+	}
+
+	public async clearDelay(iface, deviceId, delayId) {
+		let unsubscribe: Unsubscribe = () => {};
+		
+		return new ExtraPromise((resolve, reject) => {
+			let buf : Buffer = Buffer.alloc(8);
+			let commControl : number = CommControl.commandBit;
+			let dataCtrl : number = DataControl.clearDelay;
+			buf[0] = this.canAddresses.clearDelay;
+			buf[1] = commControl;
+			buf[2] = dataCtrl;
+			buf[3] = 0xFF;
+			Buffer.from([delayId >> 24, delayId >> 16, delayId >> 8, delayId]).copy(buf, 4);
+
+			unsubscribe = this.canService.subscribe((can: Can, frame: CanFrame) => {
+				let payload = this.parseFrame(frame);
+				if (payload.to == this.canAddresses.clearDelay
+				) {
+					if (payload.commControl.isAcknowledge) {
+						resolve(payload.commControl.isAcknowledge);
+					} else {
+						reject(new Error("Delay could not be deleted!"));
+					}
+				}
+			});
+			
+			this.canService.send(iface, {
+				id: deviceId,
+				data: buf
+			});
+		})
+		.timeout(this.timeout.clearDelay)
 		.finally(() => {
 			unsubscribe();
 		});

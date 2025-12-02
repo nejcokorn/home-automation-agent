@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseArrayPipe, Post, UsePipes, ValidationPipe } from "@nestjs/common";
+import { Body, Controller, Get, Delete, Param, ParseArrayPipe, Post, UsePipes, ValidationPipe } from "@nestjs/common";
 import { DeviceService } from "src/device/device.service";
 import { DeviceConfigDto, DeviceCommandDto } from "./device.dto";
 import { DataControl } from "./device.types";
@@ -109,6 +109,22 @@ export class DeviceController {
 
 		// Return configuration
 		return delays;
+	}
+
+	@Delete('can/:iface/device/:deviceId/delay/:delayId')
+	async clearDelay(
+		@Param('iface') iface: string,
+		@Param('deviceId') deviceId: number,
+		@Param('delayId') delayId: number,
+	) {
+		// Get device configuration
+		await this.device.clearDelay(iface, deviceId, delayId);
+
+		// Return configuration
+		return {
+			success: true,
+			delayId: delayId
+		};
 	}
 
 	@Get('can/:iface/device/:deviceId/:signalType/:direction/:portId')
