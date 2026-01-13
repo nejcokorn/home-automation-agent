@@ -85,16 +85,16 @@ export class DeviceService {
 	}
 
 	canAddresses = {
-		getPort: 0xF0,
-		setPort: 0xF1,
-		discover: 0xF2,
-		ping: 0xF3,
-		getConfig: 0xF4,
-		setConfig: 0xF5,
-		writeEEPROM: 0xF6,
-		listDelays: 0xF7,
-		clearDelay: 0xF8,
-		broadcastInfo: 0x0FE,
+		getPort:         0xF0,
+		setPort:         0xF1, // TODO pool of addresses F1-F5
+		discover:        0xF2,
+		ping:            0xF3,
+		getConfig:       0xF4,
+		setConfig:       0xF5,
+		writeEEPROM:     0xF6,
+		listDelays:      0xF7,
+		clearDelay:      0xF8,
+		broadcastInfo:   0x0FE,
 		broadcastAction: 0x0FF,
 	}
 

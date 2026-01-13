@@ -33,7 +33,7 @@ export class DeviceMqtt implements OnModuleInit, OnModuleDestroy {
 		this.canSubscription = this.can.subscribe((can: Can, frame: CanFrame) => {
 			let payload: DeviceFrame = this.deviceService.parseFrame(frame);
 			
-			if (payload.to == this.deviceService.canAddresses.broadcast) {
+			if (payload.to == this.deviceService.canAddresses.broadcastAction) {
 				if (payload.dataCtrl.isInput) { // Pipe input changes to MQTT
 					this.mqtt.publish(`can/${can.iface.name}/device/${payload.from}/input/${payload.port}`, payload); 
 				} else if (payload.dataCtrl.isOutput) { // Pipe output changes to MQTT

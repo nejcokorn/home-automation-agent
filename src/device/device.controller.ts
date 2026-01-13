@@ -1,7 +1,6 @@
 import { Body, Controller, Get, Delete, Param, ParseArrayPipe, Post, UsePipes, ValidationPipe } from "@nestjs/common";
 import { DeviceService } from "src/device/device.service";
 import { DeviceConfigDto, DeviceCommandDto } from "./device.dto";
-import { DataControl } from "./device.types";
 
 @Controller()
 export class DeviceController {
