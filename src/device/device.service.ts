@@ -569,8 +569,8 @@ export class DeviceService {
 			let buf : Buffer = Buffer.alloc(8);
 			let commControl : number = CommControl.commandBit;
 			let dataCtrl : number = DataControl.listDelays;
-			let delays: { id: number, deviceId: number, delay: number, port:number, type: ActionType }[] = [];
-			let delay: { id: number, deviceId: number, delay: number, port:number, type: ActionType };
+			let delays: { id: number, deviceId: number, execute: boolean, delay: number, port:number, type: ActionType }[] = [];
+			let delay: { id: number, deviceId: number, execute: boolean, delay: number, port:number, type: ActionType };
 			let packageNum = 1;
 			buf[0] = this.canAddresses.listDelays;
 			buf[1] = commControl;
@@ -588,6 +588,7 @@ export class DeviceService {
 								delay = {
 									id: payload.data,
 									deviceId: 0xFF,
+									execute: false,
 									port: payload.port,
 									type: ActionType.low,
 									delay: 0,
@@ -596,9 +597,12 @@ export class DeviceService {
 								delay.deviceId = payload.data;
 								break;
 							case 3:
-								delay.type = numToActionType[(payload.data & 0xFF)]
+								delay.execute = payload.data == 1 ? true : false;
 								break;
 							case 4:
+								delay.type = numToActionType[(payload.data & 0xFF)]
+								break;
+							case 5:
 								delay.delay = payload.data;
 								delays.push(delay);
 								packageNum = 0;
