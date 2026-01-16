@@ -86,8 +86,10 @@ export enum ConfigType {
 
 
 export type DeviceFrame = {
-	to: number;
-	from: number;
+	packageId: number;
+	commandId: number;
+	initiatorId: number;
+	responderId: number;
 	commControl: {
 		isCommand: boolean;
 		isDiscovery: boolean;
