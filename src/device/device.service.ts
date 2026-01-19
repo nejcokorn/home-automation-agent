@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { Can, CanFrame } from "src/can/can.types";
-import { CommControl, DataControl, ConfigControl, ConfigType, DeviceFrame, ActionType, ActionMode, ActionTrigger } from "src/device/device.types";
+import { CommunicationCtrl, DataControl, CommandOperations, ConfigOperations, DeviceFrame, ActionType, ActionMode, ActionTrigger } from "src/device/device.types";
 import { LoggerExtra } from "src/extras/logger.extra";
 import { ExtraPromise } from "src/extras/promise.extra";
 import { CanService } from "src/can/can.service";
@@ -10,22 +10,22 @@ type Unsubscribe = () => void;
 
 // Gropu of general configurations
 const generalConfigs = [
-	ConfigType.debounce,
-	ConfigType.doubleclick,
-	ConfigType.actions,
-	ConfigType.bypassInstantly,
-	ConfigType.bypassOnDIPSwitch,
-	ConfigType.bypassOnDisconnect,
+	ConfigOperations.debounce,
+	ConfigOperations.doubleclick,
+	ConfigOperations.actions,
+	ConfigOperations.bypassInstantly,
+	ConfigOperations.bypassOnDIPSwitch,
+	ConfigOperations.bypassOnDisconnect,
 ]
 
 // Group of action configurations
 const actionConfigs = [
-	ConfigType.actionBase,
-	ConfigType.actionPorts,
-	ConfigType.actionSkipWhenDelay,
-	ConfigType.actionClearDelays,
-	ConfigType.actionDelay,
-	ConfigType.actionLongpress,
+	ConfigOperations.actionBase,
+	ConfigOperations.actionPorts,
+	ConfigOperations.actionSkipWhenDelay,
+	ConfigOperations.actionClearDelays,
+	ConfigOperations.actionDelay,
+	ConfigOperations.actionLongpress,
 ]
 
 const numToActionTrigger = {
@@ -107,20 +107,25 @@ export class DeviceService {
 		
 		return await new ExtraPromise((resolve, reject) => {
 			let packageId: number = this.nextPackageId(this.canAddresses.getPort, options.deviceId);
-			let buf : Buffer = Buffer.alloc(8);
-			let commControl : number = CommControl.commandBit;
-			let dataCtrl : number = (options.signalType == DataControl[DataControl.analog] ? DataControl.analog : DataControl.digital) | (options.direction == DataControl[DataControl.input] ? DataControl.input : DataControl.output)
-			// buf[0] = this.canAddresses.getPort;
-			buf[1] = commControl;
-			buf[2] = dataCtrl;
+			let commControl: number = CommunicationCtrl.empty;
+			let dataCtrl: number =
+				DataControl.commandBit
+				| (options.signalType == DataControl[DataControl.analog] ? DataControl.analog : DataControl.digital)
+				| (options.direction == DataControl[DataControl.input] ? DataControl.input : DataControl.output)
+			let operation = 0x00;
+
+			let buf: Buffer = Buffer.alloc(8);
+			buf[0] = commControl;
+			buf[1] = dataCtrl;
+			buf[2] = operation;
 			buf[3] = options.portId;
 
 			unsubscribe = this.canService.subscribe((can: Can, frame: CanFrame) => {
 				let payload = this.parseFrame(frame);
 				if (payload.packageId == packageId
-					&& payload.commControl.isCommand == true
 					&& payload.commControl.isAcknowledge == true
-					&& payload.dataCtrl.isSet == false
+					&& payload.dataCtrl.isCommand == true
+					&& payload.command.operation == CommandOperations.get
 					&& payload.port == options.portId
 				) {
 					resolve(payload.data);
@@ -145,66 +150,48 @@ export class DeviceService {
 		return await new ExtraPromise((resolve, reject) => {
 			let packageId: number = this.nextPackageId(this.canAddresses.setPort, options.deviceId);
 			let type: number = actionTypeToNum[options.type];
-			let buf: Buffer = Buffer.alloc(8);
-			let commControl : number = CommControl.commandBit | (options.extra !== undefined || options.delay > 0 ? CommControl.waitBit : CommControl.empty);
-			let dataCtrl : number =
-				DataControl.set
+			let commControl: number = options.delay > 0 ? CommunicationCtrl.waitBit : CommunicationCtrl.empty;
+			let dataCtrl: number =
+				DataControl.commandBit
 				| (options.signalType == DataControl[DataControl.analog] ? DataControl.analog : DataControl.digital)
 				| (options.direction == DataControl[DataControl.input] ? DataControl.input : DataControl.output)
 				| DataControl.integer;
-			// buf[0] = this.canAddresses.setPort;
-			buf[1] = commControl;
-			buf[2] = dataCtrl;
+			let operation = CommandOperations.set;
+			
+			let buf: Buffer = Buffer.alloc(8);
+			buf[0] = commControl;
+			buf[1] = dataCtrl;
+			buf[2] = operation;
 			buf[3] = options.portId;
 			Buffer.from([type >> 24, type >> 16, type >> 8, type]).copy(buf, 4);
 
 			unsubscribe = this.canService.subscribe((can: Can, frame: CanFrame) => {
 				let payload = this.parseFrame(frame);
 				if (payload.packageId == packageId
-					&& payload.commControl.isCommand == true
 					&& payload.commControl.isAcknowledge == true
-					&& (payload.dataCtrl.isSet == true)
+					&& payload.dataCtrl.isCommand == true
 					&& payload.port == options.portId
 				) {
 					resolve(payload.data);
 				}
 			});
-			
+
 			this.canService.send(options.iface, {
 				id: packageId,
 				data: buf,
 				ext: true
 			});
 
-			if (options.extra !== undefined) {
-				commControl = CommControl.commandBit | (options.delay > 0 ? CommControl.waitBit : CommControl.empty);
-				dataCtrl =
-					DataControl.set
-					| (options.signalType == DataControl[DataControl.analog] ? DataControl.analog : DataControl.digital)
-					| (options.direction == DataControl[DataControl.input] ? DataControl.input : DataControl.output)
-					| DataControl.extra
-					| DataControl.integer;
-				buf[1] = commControl;
-				buf[2] = dataCtrl;
-				Buffer.from([options.extra >> 24, options.extra >> 16, options.extra >> 8, options.extra]).copy(buf, 4);
-				this.canService.send(options.iface, {
-					id: packageId,
-					data: buf,
-					ext: true
-				});
-			}
-			
 			if (options.delay > 0) {
-				commControl = CommControl.commandBit;
-				dataCtrl =
-					DataControl.set
-					| (options.signalType == DataControl[DataControl.analog] ? DataControl.analog : DataControl.digital)
-					| (options.direction == DataControl[DataControl.input] ? DataControl.input : DataControl.output)
-					| DataControl.delay
-					| DataControl.integer;
-				buf[1] = commControl;
-				buf[2] = dataCtrl;
+				commControl = CommunicationCtrl.empty;
+				operation = CommandOperations.delay;
+
+				buf[0] = commControl;
+				buf[1] = dataCtrl;
+				buf[2] = operation;
+				buf[3] = options.portId;
 				Buffer.from([options.delay >> 24, options.delay >> 16, options.delay >> 8, options.delay]).copy(buf, 4);
+
 				this.canService.send(options.iface, {
 					id: packageId,
 					data: buf,
@@ -224,12 +211,12 @@ export class DeviceService {
 		return await new ExtraPromise((resolve, reject) => {
 			let packageId: number = this.nextPackageId(this.canAddresses.ping, options.deviceId);
 			let deviceList: number[] = [];
-			let buf : Buffer = Buffer.alloc(8);
-			let commControl : number = CommControl.commandBit | CommControl.pingBit;
-			let dataCtrl : number = DataControl.empty;
-			// buf[0] = this.canAddresses.ping;
-			buf[1] = commControl;
-			buf[2] = dataCtrl;
+			let commControl: number = CommunicationCtrl.pingBit;
+			let dataCtrl: number = DataControl.commandBit;
+
+			let buf: Buffer = Buffer.alloc(8);
+			buf[0] = commControl;
+			buf[1] = dataCtrl;
 
 			let timeout = setTimeout(() => {
 				resolve(deviceList);
@@ -237,9 +224,9 @@ export class DeviceService {
 			unsubscribe = this.canService.subscribe((can: Can, frame: CanFrame) => {
 				let payload = this.parseFrame(frame);
 				if (payload.packageId == packageId
-					&& payload.commControl.isCommand == true
-					&& payload.commControl.isPing == true
 					&& payload.commControl.isAcknowledge == true
+					&& payload.commControl.isPing == true
+					&& payload.dataCtrl.isCommand == true
 				) {
 					if (options.deviceId != this.canAddresses.broadcast) {
 						deviceList.push(payload.data);
@@ -268,12 +255,12 @@ export class DeviceService {
 		return await new ExtraPromise((resolve, reject) => {
 			let packageId: number = this.nextPackageId(this.canAddresses.discover, this.canAddresses.broadcast);
 			let deviceList: number[] = [];
-			let buf : Buffer = Buffer.alloc(8);
-			let commControl : number = CommControl.commandBit | CommControl.discoveryBit;
-			let dataCtrl : number = DataControl.empty;
-			// buf[0] = this.canAddresses.discover;
-			buf[1] = commControl;
-			buf[2] = dataCtrl;
+			let commControl: number = CommunicationCtrl.discoveryBit;
+			let dataCtrl: number = DataControl.commandBit;
+
+			let buf: Buffer = Buffer.alloc(8);
+			buf[0] = commControl;
+			buf[1] = dataCtrl;
 
 			let timeout = setTimeout(() => {
 				resolve(deviceList);
@@ -281,9 +268,9 @@ export class DeviceService {
 			unsubscribe = this.canService.subscribe((can: Can, frame: CanFrame) => {
 				let payload = this.parseFrame(frame);
 				if (payload.packageId == packageId
-					&& payload.commControl.isCommand == true
 					&& payload.commControl.isDiscovery == true
 					&& payload.commControl.isAcknowledge == true
+					&& payload.dataCtrl.isCommand == true
 				) {
 					deviceList.push(payload.data);
 				}
@@ -309,12 +296,12 @@ export class DeviceService {
 				for (const configType in inputConfig) {
 					const value = inputConfig[configType];
 
-					if (configType == ConfigType[ConfigType.actions]) {
+					if (configType == ConfigOperations[ConfigOperations.actions]) {
 						// Remove all actions before inserting new set of actions
 						await this.sendConfig({
 							...options,
 							inputPortIdx: inputConfig.inputPortIdx,
-							configType: ConfigType[ConfigType.actions], 
+							configType: ConfigOperations[ConfigOperations.actions], 
 							data: 0
 						});
 
@@ -328,7 +315,7 @@ export class DeviceService {
 							await this.sendConfig({
 								...options,
 								inputPortIdx: inputConfig.inputPortIdx,
-								configType: ConfigType[ConfigType.actionBase],
+								configType: ConfigOperations[ConfigOperations.actionBase],
 								data: trigger << 16 | mode << 8 | type
 							});
 
@@ -336,7 +323,7 @@ export class DeviceService {
 							await this.sendConfig({
 								...options,
 								inputPortIdx: inputConfig.inputPortIdx,
-								configType: ConfigType[ConfigType.actionPorts],
+								configType: ConfigOperations[ConfigOperations.actionPorts],
 								data: (action.output.deviceId ? action.output.deviceId : 0xFF) << 24 | this.portsToHex(action.output.ports)
 							});
 
@@ -344,7 +331,7 @@ export class DeviceService {
 							await this.sendConfig({
 								...options,
 								inputPortIdx: inputConfig.inputPortIdx,
-								configType: ConfigType[ConfigType.actionSkipWhenDelay],
+								configType: ConfigOperations[ConfigOperations.actionSkipWhenDelay],
 								data: (action.output.skipWhenDelayDeviceId ? action.output.skipWhenDelayDeviceId : 0xFF) << 24 | this.portsToHex(action.output.skipWhenDelayPorts)
 							});
 
@@ -352,7 +339,7 @@ export class DeviceService {
 							await this.sendConfig({
 								...options,
 								inputPortIdx: inputConfig.inputPortIdx,
-								configType: ConfigType[ConfigType.actionClearDelays],
+								configType: ConfigOperations[ConfigOperations.actionClearDelays],
 								data: (action.output.clearDelayDeviceId ? action.output.clearDelayDeviceId : 0xFF) << 24 | this.portsToHex(action.output.clearDelayPorts)
 							});
 
@@ -360,7 +347,7 @@ export class DeviceService {
 							await this.sendConfig({
 								...options,
 								inputPortIdx: inputConfig.inputPortIdx,
-								configType: ConfigType[ConfigType.actionDelay],
+								configType: ConfigOperations[ConfigOperations.actionDelay],
 								data: action.output.delay
 							});
 
@@ -368,11 +355,11 @@ export class DeviceService {
 							await this.sendConfig({
 								...options,
 								inputPortIdx: inputConfig.inputPortIdx,
-								configType: ConfigType[ConfigType.actionLongpress],
+								configType: ConfigOperations[ConfigOperations.actionLongpress],
 								data: action.longpress
 							});
 						}
-					} else if (Object.values(ConfigType).filter(v => typeof v === "string").includes(configType)){
+					} else if (Object.values(ConfigOperations).filter(v => typeof v === "string").includes(configType)){
 						await this.sendConfig({
 							...options,
 							inputPortIdx: inputConfig.inputPortIdx,
@@ -393,12 +380,14 @@ export class DeviceService {
 		await new ExtraPromise((resolve, reject) => {
 			let packageId: number = this.nextPackageId(this.canAddresses.setConfig, options.deviceId);
 			// Construct buffer
-			let commControl: number = CommControl.commandBit;
-			let configCtrl: number =  ConfigControl.configBit | ConfigControl.set | ConfigType[options.configType];
+			let commControl: number = CommunicationCtrl.empty;
+			let dataCtrl: number = DataControl.configBit;
+			let operation: number = ConfigOperations.set | ConfigOperations[options.configType];
+
 			let buf: Buffer = Buffer.alloc(8);
-			// buf[0] = this.canAddresses.setConfig;
-			buf[1] = commControl;
-			buf[2] = configCtrl;
+			buf[0] = commControl;
+			buf[1] = dataCtrl;
+			buf[2] = operation;
 			buf[3] = options.inputPortIdx;
 			Buffer.from([options.data >> 24, options.data >> 16, options.data >> 8, options.data]).copy(buf, 4);
 
@@ -407,11 +396,10 @@ export class DeviceService {
 				let payload = this.parseFrame(frame);
 				if (
 					payload.packageId == packageId
-					&& payload.commControl.isCommand == true
 					&& payload.commControl.isAcknowledge == true
-					&& payload.configCtrl.isConfig == true
-					&& payload.configCtrl.isSet == true
-					&& payload.configCtrl.option == ConfigType[options.configType]
+					&& payload.dataCtrl.isConfig == true
+					&& payload.config.isSet == true
+					&& payload.config.operation == ConfigOperations[options.configType]
 				) {
 					resolve(payload);
 				}
@@ -442,12 +430,14 @@ export class DeviceService {
 				let configValue = await new ExtraPromise<number | ActionDto[]>((resolve, reject) => {
 					let packageId: number = this.nextPackageId(this.canAddresses.getConfig, options.deviceId);
 					// Construct config for each input port
-					let commControl : number = CommControl.commandBit;
-					let configCtrl : number = ConfigControl.configBit | ConfigControl.get | config;
-					let buf : Buffer = Buffer.alloc(8);
-					// buf[0] = this.canAddresses.getConfig;
-					buf[1] = commControl;
-					buf[2] = configCtrl;
+					let commControl: number = CommunicationCtrl.empty;
+					let dataCtrl: number = DataControl.configBit;
+					let operation: number = ConfigOperations.get | config;
+					
+					let buf: Buffer = Buffer.alloc(8);
+					buf[0] = commControl;
+					buf[1] = dataCtrl;
+					buf[2] = operation;
 					buf[3] = inputPortIdx;
 
 					// Config data retrived from device
@@ -457,38 +447,38 @@ export class DeviceService {
 					unsubscribe = this.canService.subscribe((can: Can, frame: CanFrame) => { 
 						let payload = this.parseFrame(frame);
 						if (payload.packageId == packageId
-							&& payload.commControl.isCommand == true
 							&& payload.commControl.isAcknowledge == true
-							&& payload.configCtrl.isConfig == true
-							&& (payload.configCtrl.option == config || actionConfigs.includes(payload.configCtrl.option) && config == ConfigType.actions)
+							&& payload.dataCtrl.isConfig == true
+							&& (payload.config.operation == config || actionConfigs.includes(payload.config.operation) && config == ConfigOperations.actions)
 						) {
-							if (config == ConfigType.actions) {
+							if (config == ConfigOperations.actions) {
+								console.log(payload);
 								// This will indicate last action from device
-								switch (payload.configCtrl.option) {
-									case ConfigType.actions:
+								switch (payload.config.operation) {
+									case ConfigOperations.actions:
 										// This should be last acknoweadge package
 										break;
-									case ConfigType.actionPorts:
+									case ConfigOperations.actionPorts:
 										lastAction.output.deviceId = payload.data >>> 24;
 										lastAction.output.ports = this.hexToPorts(payload.data & 0xFFF);
 										break;
-									case ConfigType.actionSkipWhenDelay:
+									case ConfigOperations.actionSkipWhenDelay:
 										let skipWhenDelayDeviceId = payload.data >>> 24;
 										lastAction.output.skipWhenDelayDeviceId = skipWhenDelayDeviceId != 0xFF ? skipWhenDelayDeviceId : null;
 										lastAction.output.skipWhenDelayPorts = this.hexToPorts(payload.data & 0xFFF);
 										break;
-									case ConfigType.actionClearDelays:
+									case ConfigOperations.actionClearDelays:
 										let clearDelayDeviceId = payload.data >>> 24;
 										lastAction.output.clearDelayDeviceId = clearDelayDeviceId != 0xFF ? clearDelayDeviceId : null;
 										lastAction.output.clearDelayPorts = this.hexToPorts(payload.data & 0xFFF);
 										break;
-									case ConfigType.actionDelay:
+									case ConfigOperations.actionDelay:
 										lastAction.output.delay = payload.data;
 										break;
-									case ConfigType.actionLongpress:
+									case ConfigOperations.actionLongpress:
 										lastAction.longpress = payload.data;
 										break;
-									case ConfigType.actionBase:
+									case ConfigOperations.actionBase:
 										let trigger: ActionTrigger = numToActionTrigger[(payload.data >> 16) & 0xFF];
 										let mode: ActionMode = numToActionMode[(payload.data >> 8) & 0xFF];
 										let type: ActionType = numToActionType[(payload.data & 0xFF)];
@@ -534,7 +524,7 @@ export class DeviceService {
 					unsubscribe();
 				});
 				// Set configuration parameter
-				inputConfig[ConfigType[config]] = configValue;
+				inputConfig[ConfigOperations[config]] = configValue;
 			}
 			deviceConfig.push(inputConfig);
 		}
@@ -546,20 +536,22 @@ export class DeviceService {
 		
 		return new ExtraPromise((resolve, reject) => {
 			let packageId: number = this.nextPackageId(this.canAddresses.writeEEPROM, deviceId);
-			let buf : Buffer = Buffer.alloc(8);
-			let commControl : number = CommControl.commandBit;
-			let configCtrl : number = ConfigControl.configBit | ConfigControl.set;
-			// buf[0] = this.canAddresses.writeEEPROM;
-			buf[1] = commControl;
-			buf[2] = configCtrl;
+			let commControl: number = CommunicationCtrl.empty;
+			let dataCtrl: number = DataControl.configBit;
+			let operation: number = ConfigOperations.set | ConfigOperations.writeEEPROM;
+			
+			let buf: Buffer = Buffer.alloc(8);
+			buf[0] = commControl;
+			buf[1] = dataCtrl;
+			buf[2] = operation;
 
 			unsubscribe = this.canService.subscribe((can: Can, frame: CanFrame) => {
 				let payload = this.parseFrame(frame);
+				console.log(payload);
+				
 				if (payload.packageId == packageId
-					&& payload.commControl.isCommand == true
 					&& payload.commControl.isAcknowledge == true
-					&& payload.configCtrl.isSet == true
-					&& payload.configCtrl.option == ConfigType.writeEEPROM
+					&& payload.config.operation == ConfigOperations.writeEEPROM
 				) {
 					resolve(payload.data);
 				}
@@ -582,21 +574,24 @@ export class DeviceService {
 		
 		return new ExtraPromise((resolve, reject) => {
 			let packageId: number = this.nextPackageId(this.canAddresses.listDelays, deviceId);
-			let buf : Buffer = Buffer.alloc(8);
-			let commControl : number = CommControl.commandBit;
-			let dataCtrl : number = DataControl.listDelays;
+			let commControl: number = CommunicationCtrl.empty;
+			let dataCtrl: number = DataControl.commandBit;
+			let operation: number = CommandOperations.listDelays;
+			
 			let delays: { id: number, deviceId: number, execute: boolean, delay: number, port:number, type: ActionType }[] = [];
 			let delay: { id: number, deviceId: number, execute: boolean, delay: number, port:number, type: ActionType };
 			let packageNum = 1;
-			// buf[0] = this.canAddresses.listDelays;
-			buf[1] = commControl;
-			buf[2] = dataCtrl;
+			
+			let buf: Buffer = Buffer.alloc(8);
+			buf[0] = commControl;
+			buf[1] = dataCtrl;
+			buf[2] = operation;
 
 			unsubscribe = this.canService.subscribe((can: Can, frame: CanFrame) => {
 				let payload = this.parseFrame(frame);
 				if (payload.packageId == packageId
 					&& payload.commControl.isAcknowledge == true
-					&& payload.dataCtrl.isListDelays == true
+					&& payload.command.operation == CommandOperations.listDelays
 				) {
 					if (payload.commControl.isWait) {
 						switch (packageNum) {
@@ -648,12 +643,14 @@ export class DeviceService {
 		
 		return new ExtraPromise((resolve, reject) => {
 			let packageId: number = this.nextPackageId(this.canAddresses.clearDelay, deviceId);
-			let buf : Buffer = Buffer.alloc(8);
-			let commControl : number = CommControl.commandBit;
-			let dataCtrl : number = DataControl.clearDelay;
-			// buf[0] = this.canAddresses.clearDelay;
-			buf[1] = commControl;
-			buf[2] = dataCtrl;
+			let commControl: number = CommunicationCtrl.empty;
+			let dataCtrl: number = DataControl.commandBit;
+			let operation: number = CommandOperations.clearDelayById;
+			
+			let buf: Buffer = Buffer.alloc(8);
+			buf[0] = commControl;
+			buf[1] = dataCtrl;
+			buf[2] = operation;
 			buf[3] = 0xFF;
 			Buffer.from([delayId >> 24, delayId >> 16, delayId >> 8, delayId]).copy(buf, 4);
 
@@ -683,32 +680,32 @@ export class DeviceService {
 	parseFrame(frame: CanFrame): DeviceFrame {
 		let packageId = frame.id;
 		let commandId = frame.id >> 16;
-		let initiatorId = (frame.id && 0xFF00) >> 8
-		let responderId = frame.id && 0xFF;
+		let initiatorId = (frame.id & 0xFF00) >> 8
+		let responderId = frame.id & 0xFF;
 		// let from = frame.data[0];
 		let commControl = {
-			isCommand: frame.data[1] & CommControl.commandBit ? true : false,
-			isDiscovery: frame.data[1] & CommControl.discoveryBit ? true : false,
-			isPing: frame.data[1] & CommControl.pingBit ? true : false,
-			isAcknowledge: frame.data[1] & CommControl.acknowledgeBit ? true : false,
-			isWait: frame.data[1] & CommControl.waitBit ? true : false,
-			isError: frame.data[1] & CommControl.errorBit ? true : false
+			isDiscovery: frame.data[0] & CommunicationCtrl.discoveryBit ? true : false,
+			isPing: frame.data[0] & CommunicationCtrl.pingBit ? true : false,
+			isAcknowledge: frame.data[0] & CommunicationCtrl.acknowledgeBit ? true : false,
+			isWait: frame.data[0] & CommunicationCtrl.waitBit ? true : false,
+			isError: frame.data[0] & CommunicationCtrl.errorBit ? true : false
 		};
 		let dataCtrl = {
-			isGet : (frame.data[2] & DataControl.operationBits) == DataControl.get ? true : false,
-			isSet : (frame.data[2] & DataControl.operationBits) == DataControl.set ? true : false,
-			isListDelays : (frame.data[2] & DataControl.operationBits) == DataControl.listDelays ? true : false,
-			isAnalog : frame.data[2] & DataControl.analog ? true : false,
-			isDigital : !(frame.data[2] & DataControl.analog) ? true : false,
-			isInput : frame.data[2] & DataControl.input ? true : false,
-			isOutput : !(frame.data[2] & DataControl.input) ? true : false,
-			dataType : frame.data[2] & DataControl.dataTypeBits,
+			isCommand: frame.data[1] & DataControl.commandBit ? true : false,
+			isConfig: frame.data[1] & DataControl.configBit ? true : false,
+			isAnalog: frame.data[1] & DataControl.analog ? true : false,
+			isDigital: !(frame.data[1] & DataControl.analog) ? true : false,
+			isInput: frame.data[1] & DataControl.input ? true : false,
+			isOutput: !(frame.data[1] & DataControl.input) ? true : false,
+			dataType: frame.data[1] & DataControl.dataTypeBit,
 		};
-		let configCtrl = {
-			isConfig : frame.data[2] & ConfigControl.configBit ? true : false,
-			isGet : frame.data[2] & ConfigControl.operationBit ? false : true,
-			isSet : frame.data[2] & ConfigControl.operationBit ? true : false,
-			option : frame.data[2] & ConfigControl.optionBits
+		let command = {
+			operation: frame.data[2]
+		};
+		let config = {
+			isGet: (frame.data[2] & 0x80) == 0x80 ? false : true,
+			isSet: (frame.data[2] & 0x80) == 0x00 ? true : false,
+			operation: (frame.data[2] & 0x7F)
 		};
 		let port = frame.data[3];
 		let data = (frame.data[4] << 24) |
@@ -723,7 +720,8 @@ export class DeviceService {
 			responderId,
 			commControl,
 			dataCtrl,
-			configCtrl,
+			command,
+			config,
 			port,
 			data
 		}
