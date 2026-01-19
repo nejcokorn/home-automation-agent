@@ -1,4 +1,4 @@
-export enum CommunicationCtrl {
+export enum CommCtrl {
 	empty          = 0x00,
 	discoveryBit   = 0x80,
 	pingBit        = 0x40,
@@ -8,7 +8,7 @@ export enum CommunicationCtrl {
 	notifyBit      = 0x04,
 };
 
-export enum DataControl {
+export enum DataCtrl {
 	empty         = 0x00,
 	commandBit    = 0x80,
 	configBit     = 0x40,
@@ -27,7 +27,7 @@ export enum DataControl {
 };
 
 // Command operations
-export enum CommandOperations {
+export enum CommandOper {
 	empty             = 0x00,
 	get               = 0x00,
 	set               = 0x01,
@@ -38,7 +38,7 @@ export enum CommandOperations {
 };
 
 // Config operations
-export enum ConfigOperations {
+export enum ConfigOper {
 	get                 = 0x00, // Combine get operation with the rest of the operations
 	set                 = 0x80, // Combine set operation with the rest of the operations
 	
@@ -91,7 +91,7 @@ export type DeviceFrame = {
 	commandId: number;
 	initiatorId: number;
 	responderId: number;
-	commControl: {
+	commCtrl: {
 		isDiscovery: boolean;
 		isPing: boolean;
 		isAcknowledge: boolean;
@@ -108,12 +108,12 @@ export type DeviceFrame = {
 		dataType: DataType;
 	};
 	command: {
-		operation: CommandOperations
+		operation: CommandOper
 	},
 	config: {
 		isGet: boolean;
 		isSet: boolean;
-		operation: ConfigOperations;
+		operation: ConfigOper;
 	}
 	port: number;
 	data: number;
