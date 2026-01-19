@@ -130,7 +130,7 @@ export class DeviceService {
 					) {
 						resolve(payload.data);
 					} else {
-						reject(payload);
+						reject(new Error("Could not get the device port!"));
 					}
 				}
 			});
@@ -178,7 +178,7 @@ export class DeviceService {
 					) {
 						resolve(payload.data);
 					} else {
-						reject(payload);
+						reject(new Error("Could not set the device port!"));
 					}
 				}
 			});
@@ -243,7 +243,7 @@ export class DeviceService {
 							timeout.close();
 						}
 					} else {
-						reject(payload);
+						reject(new Error("Ping was unsuccessful."));
 					}
 				}
 			});
@@ -286,7 +286,7 @@ export class DeviceService {
 					) {
 						deviceList.push(payload.data);
 					} else {
-						reject(payload);
+						reject(new Error("Failed to retrieve the list of devices."));
 					}
 				}
 			});
@@ -418,7 +418,7 @@ export class DeviceService {
 					) {
 						resolve(payload);
 					} else {
-						reject(payload);
+						reject(new Error("Failed to write the configuration to the device."));
 					}
 				}
 			});
@@ -531,7 +531,7 @@ export class DeviceService {
 									return resolve(payload.data);
 								}
 							} else {
-								reject(payload);
+								reject(new Error("Could not retrieve the device configuration."));
 							}
 						}
 					});
@@ -579,7 +579,7 @@ export class DeviceService {
 					) {
 						resolve(payload.data);
 					} else {
-						reject(payload);
+						reject(new Error("Failed to write the configuration to EEPROM."));
 					}
 				}
 			});
@@ -652,7 +652,7 @@ export class DeviceService {
 							resolve(delays);
 						}
 					} else {
-						reject(payload);
+						reject(new Error("Could not list delays."));
 					}
 				}
 			});
@@ -693,7 +693,7 @@ export class DeviceService {
 					) {
 						resolve(payload.commCtrl.isAcknowledge);
 					} else {
-						reject(new Error("Delay could not be deleted!"));
+						reject(new Error("Failed to delete the delay."));
 					}
 				}
 			});
