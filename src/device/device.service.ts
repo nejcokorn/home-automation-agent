@@ -669,7 +669,7 @@ export class DeviceService {
 		});
 	}
 
-	public async clearDelay(iface, deviceId, delayId) {
+	public async clearDelayById(iface, deviceId, delayId) {
 		let unsubscribe: Unsubscribe = () => {};
 		
 		return new ExtraPromise((resolve, reject) => {
@@ -684,6 +684,46 @@ export class DeviceService {
 			buf[2] = operation;
 			buf[3] = 0xFF;
 			Buffer.from([delayId >> 24, delayId >> 16, delayId >> 8, delayId]).copy(buf, 4);
+
+			unsubscribe = this.canService.subscribe((can: Can, frame: CanFrame) => {
+				let payload = this.parseFrame(frame);
+				if (payload.packageId == packageId) {
+					if (payload.commCtrl.isAcknowledge == true
+						&& !payload.commCtrl.isError == true
+					) {
+						resolve(payload.commCtrl.isAcknowledge);
+					} else {
+						reject(new Error("Failed to delete the delay."));
+					}
+				}
+			});
+			
+			this.canService.send(iface, {
+				id: packageId,
+				data: buf,
+				ext: true
+			});
+		})
+		.timeout(this.timeout.clearDelay)
+		.finally(() => {
+			unsubscribe();
+		});
+	}
+
+	public async clearDelayByPort(iface, deviceId, port) {
+		let unsubscribe: Unsubscribe = () => {};
+		
+		return new ExtraPromise((resolve, reject) => {
+			let packageId: number = this.nextPackageId(this.canAddresses.clearDelay, deviceId);
+			let commCtrl: number = CommCtrl.empty;
+			let dataCtrl: number = DataCtrl.commandBit;
+			let operation: number = CommandOper.clearDelayByPort;
+			
+			let buf: Buffer = Buffer.alloc(8);
+			buf[0] = commCtrl;
+			buf[1] = dataCtrl;
+			buf[2] = operation;
+			buf[3] = port;
 
 			unsubscribe = this.canService.subscribe((can: Can, frame: CanFrame) => {
 				let payload = this.parseFrame(frame);

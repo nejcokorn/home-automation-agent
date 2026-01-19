@@ -111,18 +111,33 @@ export class DeviceController {
 	}
 
 	@Delete('can/:iface/device/:deviceId/delay/:delayId')
-	async clearDelay(
+	async clearDelayById(
 		@Param('iface') iface: string,
 		@Param('deviceId') deviceId: number,
 		@Param('delayId') delayId: number,
 	) {
 		// Get device configuration
-		await this.device.clearDelay(iface, deviceId, delayId);
+		await this.device.clearDelayById(iface, deviceId, delayId);
 
 		// Return configuration
 		return {
 			success: true,
 			delayId: delayId
+		};
+	}
+
+	@Delete('can/:iface/device/:deviceId/delay/port/:port')
+	async clearDelayByPort(
+		@Param('iface') iface: string,
+		@Param('deviceId') deviceId: number,
+		@Param('port') port: number,
+	) {
+		// Get device configuration
+		await this.device.clearDelayByPort(iface, deviceId, port);
+
+		// Return configuration
+		return {
+			success: true
 		};
 	}
 
