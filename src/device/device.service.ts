@@ -122,13 +122,16 @@ export class DeviceService {
 
 			unsubscribe = this.canService.subscribe((can: Can, frame: CanFrame) => {
 				let payload = this.parseFrame(frame);
-				if (payload.packageId == packageId
-					&& payload.commCtrl.isAcknowledge == true
-					&& payload.dataCtrl.isCommand == true
-					&& payload.command.operation == CommandOper.get
-					&& payload.port == options.portId
-				) {
-					resolve(payload.data);
+				if (payload.packageId == packageId) {
+					if (payload.commCtrl.isAcknowledge
+						&& !payload.commCtrl.isError
+						&& payload.dataCtrl.isCommand == true
+						&& payload.command.operation == CommandOper.get
+					) {
+						resolve(payload.data);
+					} else {
+						reject(payload);
+					}
 				}
 			});
 			
@@ -167,12 +170,16 @@ export class DeviceService {
 
 			unsubscribe = this.canService.subscribe((can: Can, frame: CanFrame) => {
 				let payload = this.parseFrame(frame);
-				if (payload.packageId == packageId
-					&& payload.commCtrl.isAcknowledge == true
-					&& payload.dataCtrl.isCommand == true
-					&& payload.port == options.portId
-				) {
-					resolve(payload.data);
+				if (payload.packageId == packageId) {
+					if (payload.commCtrl.isAcknowledge == true
+						&& !payload.commCtrl.isError == true
+						&& payload.dataCtrl.isCommand == true
+						&& payload.port == options.portId
+					) {
+						resolve(payload.data);
+					} else {
+						reject(payload);
+					}
 				}
 			});
 
@@ -223,16 +230,20 @@ export class DeviceService {
 			}, this.timeout.grace);
 			unsubscribe = this.canService.subscribe((can: Can, frame: CanFrame) => {
 				let payload = this.parseFrame(frame);
-				if (payload.packageId == packageId
-					&& payload.commCtrl.isAcknowledge == true
-					&& payload.commCtrl.isPing == true
-					&& payload.dataCtrl.isCommand == true
-				) {
-					if (options.deviceId != this.canAddresses.broadcast) {
-						deviceList.push(payload.data);
+				if (payload.packageId == packageId) {
+					if (payload.commCtrl.isAcknowledge == true
+						&& !payload.commCtrl.isError == true
+						&& payload.commCtrl.isPing == true
+						&& payload.dataCtrl.isCommand == true
+					) {
+						if (options.deviceId != this.canAddresses.broadcast) {
+							deviceList.push(payload.data);
+						} else {
+							resolve([payload.data]);
+							timeout.close();
+						}
 					} else {
-						resolve([payload.data]);
-						timeout.close();
+						reject(payload);
 					}
 				}
 			});
@@ -267,12 +278,16 @@ export class DeviceService {
 			}, this.timeout.grace);
 			unsubscribe = this.canService.subscribe((can: Can, frame: CanFrame) => {
 				let payload = this.parseFrame(frame);
-				if (payload.packageId == packageId
-					&& payload.commCtrl.isDiscovery == true
-					&& payload.commCtrl.isAcknowledge == true
-					&& payload.dataCtrl.isCommand == true
-				) {
-					deviceList.push(payload.data);
+				if (payload.packageId == packageId) {
+					if (payload.commCtrl.isAcknowledge == true
+						&& !payload.commCtrl.isError == true
+						&& payload.commCtrl.isDiscovery == true
+						&& payload.dataCtrl.isCommand == true
+					) {
+						deviceList.push(payload.data);
+					} else {
+						reject(payload);
+					}
 				}
 			});
 
@@ -394,14 +409,17 @@ export class DeviceService {
 			// Subscribe for ACK
 			unsubscribe = this.canService.subscribe((can: Can, frame: CanFrame) => {
 				let payload = this.parseFrame(frame);
-				if (
-					payload.packageId == packageId
-					&& payload.commCtrl.isAcknowledge == true
-					&& payload.dataCtrl.isConfig == true
-					&& payload.config.isSet == true
-					&& payload.config.operation == ConfigOper[options.configOper]
-				) {
-					resolve(payload);
+				if (payload.packageId == packageId) {
+					if (payload.commCtrl.isAcknowledge == true
+						&& !payload.commCtrl.isError == true
+						&& payload.dataCtrl.isConfig == true
+						&& payload.config.isSet == true
+						&& payload.config.operation == ConfigOper[options.configOper]
+					) {
+						resolve(payload);
+					} else {
+						reject(payload);
+					}
 				}
 			});
 
@@ -446,69 +464,74 @@ export class DeviceService {
 
 					unsubscribe = this.canService.subscribe((can: Can, frame: CanFrame) => { 
 						let payload = this.parseFrame(frame);
-						if (payload.packageId == packageId
-							&& payload.commCtrl.isAcknowledge == true
-							&& payload.dataCtrl.isConfig == true
-							&& (payload.config.operation == configOper || actionOper.includes(payload.config.operation) && configOper == ConfigOper.actions)
-						) {
-							if (configOper == ConfigOper.actions) {
-								console.log(payload);
-								// This will indicate last action from device
-								switch (payload.config.operation) {
-									case ConfigOper.actions:
-										// This should be last acknoweadge package
-										break;
-									case ConfigOper.actionPorts:
-										lastAction.output.deviceId = payload.data >>> 24;
-										lastAction.output.ports = this.hexToPorts(payload.data & 0xFFF);
-										break;
-									case ConfigOper.actionSkipWhenDelay:
-										let skipWhenDelayDeviceId = payload.data >>> 24;
-										lastAction.output.skipWhenDelayDeviceId = skipWhenDelayDeviceId != 0xFF ? skipWhenDelayDeviceId : null;
-										lastAction.output.skipWhenDelayPorts = this.hexToPorts(payload.data & 0xFFF);
-										break;
-									case ConfigOper.actionClearDelays:
-										let clearDelayDeviceId = payload.data >>> 24;
-										lastAction.output.clearDelayDeviceId = clearDelayDeviceId != 0xFF ? clearDelayDeviceId : null;
-										lastAction.output.clearDelayPorts = this.hexToPorts(payload.data & 0xFFF);
-										break;
-									case ConfigOper.actionDelay:
-										lastAction.output.delay = payload.data;
-										break;
-									case ConfigOper.actionLongpress:
-										lastAction.longpress = payload.data;
-										break;
-									case ConfigOper.actionBase:
-										let trigger: ActionTrigger = numToActionTrigger[(payload.data >> 16) & 0xFF];
-										let mode: ActionMode = numToActionMode[(payload.data >> 8) & 0xFF];
-										let type: ActionType = numToActionType[(payload.data & 0xFF)];
 
-										// Set object
-										lastAction = {
-											trigger,
-											mode,
-											type,
-											longpress: 0,
-											output: {
-												skipWhenDelayDeviceId: 0xFF,
-												skipWhenDelayPorts: [],
-												clearDelayDeviceId: 0xFF,
-												clearDelayPorts: [],
-												deviceId: 0xFF,
-												ports: [],
-												delay: 0,
+						if (payload.packageId == packageId) {
+							if (payload.commCtrl.isAcknowledge == true
+								&& !payload.commCtrl.isError == true
+								&& payload.dataCtrl.isConfig == true
+								&& (payload.config.operation == configOper || actionOper.includes(payload.config.operation) && configOper == ConfigOper.actions)
+							) {
+								if (configOper == ConfigOper.actions) {
+									console.log(payload);
+									// This will indicate last action from device
+									switch (payload.config.operation) {
+										case ConfigOper.actions:
+											// This should be last acknoweadge package
+											break;
+										case ConfigOper.actionPorts:
+											lastAction.output.deviceId = payload.data >>> 24;
+											lastAction.output.ports = this.hexToPorts(payload.data & 0xFFF);
+											break;
+										case ConfigOper.actionSkipWhenDelay:
+											let skipWhenDelayDeviceId = payload.data >>> 24;
+											lastAction.output.skipWhenDelayDeviceId = skipWhenDelayDeviceId != 0xFF ? skipWhenDelayDeviceId : null;
+											lastAction.output.skipWhenDelayPorts = this.hexToPorts(payload.data & 0xFFF);
+											break;
+										case ConfigOper.actionClearDelays:
+											let clearDelayDeviceId = payload.data >>> 24;
+											lastAction.output.clearDelayDeviceId = clearDelayDeviceId != 0xFF ? clearDelayDeviceId : null;
+											lastAction.output.clearDelayPorts = this.hexToPorts(payload.data & 0xFFF);
+											break;
+										case ConfigOper.actionDelay:
+											lastAction.output.delay = payload.data;
+											break;
+										case ConfigOper.actionLongpress:
+											lastAction.longpress = payload.data;
+											break;
+										case ConfigOper.actionBase:
+											let trigger: ActionTrigger = numToActionTrigger[(payload.data >> 16) & 0xFF];
+											let mode: ActionMode = numToActionMode[(payload.data >> 8) & 0xFF];
+											let type: ActionType = numToActionType[(payload.data & 0xFF)];
+
+											// Set object
+											lastAction = {
+												trigger,
+												mode,
+												type,
+												longpress: 0,
+												output: {
+													skipWhenDelayDeviceId: 0xFF,
+													skipWhenDelayPorts: [],
+													clearDelayDeviceId: 0xFF,
+													clearDelayPorts: [],
+													deviceId: 0xFF,
+													ports: [],
+													delay: 0,
+												}
 											}
-										}
-										actionData.push(lastAction);
-										break;
-								}
+											actionData.push(lastAction);
+											break;
+									}
 
-								// Another check if this is the last package
-								if (!payload.commCtrl.isWait) {
-									resolve(actionData);
+									// Another check if this is the last package
+									if (!payload.commCtrl.isWait) {
+										resolve(actionData);
+									}
+								} else {
+									return resolve(payload.data);
 								}
 							} else {
-								return resolve(payload.data);
+								reject(payload);
 							}
 						}
 					});
@@ -549,11 +572,15 @@ export class DeviceService {
 				let payload = this.parseFrame(frame);
 				console.log(payload);
 				
-				if (payload.packageId == packageId
-					&& payload.commCtrl.isAcknowledge == true
-					&& payload.config.operation == ConfigOper.writeEEPROM
-				) {
-					resolve(payload.data);
+				if (payload.packageId == packageId) {
+					if (payload.commCtrl.isAcknowledge == true
+						&& !payload.commCtrl.isError == true
+						&& payload.config.operation == ConfigOper.writeEEPROM
+					) {
+						resolve(payload.data);
+					} else {
+						reject(payload);
+					}
 				}
 			});
 			
@@ -589,39 +616,43 @@ export class DeviceService {
 
 			unsubscribe = this.canService.subscribe((can: Can, frame: CanFrame) => {
 				let payload = this.parseFrame(frame);
-				if (payload.packageId == packageId
-					&& payload.commCtrl.isAcknowledge == true
-					&& payload.command.operation == CommandOper.listDelays
-				) {
-					if (payload.commCtrl.isWait) {
-						switch (packageNum) {
-							case 1:
-								delay = {
-									id: payload.data,
-									deviceId: 0xFF,
-									execute: false,
-									port: payload.port,
-									type: ActionType.low,
-									delay: 0,
-								}
-							case 2:
-								delay.deviceId = payload.data;
-								break;
-							case 3:
-								delay.execute = payload.data == 1 ? true : false;
-								break;
-							case 4:
-								delay.type = numToActionType[(payload.data & 0xFF)]
-								break;
-							case 5:
-								delay.delay = payload.data;
-								delays.push(delay);
-								packageNum = 0;
-								break;
+				if (payload.packageId == packageId) {
+					if (payload.commCtrl.isAcknowledge == true
+						&& !payload.commCtrl.isError == true
+						&& payload.command.operation == CommandOper.listDelays
+					) {
+						if (payload.commCtrl.isWait) {
+							switch (packageNum) {
+								case 1:
+									delay = {
+										id: payload.data,
+										deviceId: 0xFF,
+										execute: false,
+										port: payload.port,
+										type: ActionType.low,
+										delay: 0,
+									}
+								case 2:
+									delay.deviceId = payload.data;
+									break;
+								case 3:
+									delay.execute = payload.data == 1 ? true : false;
+									break;
+								case 4:
+									delay.type = numToActionType[(payload.data & 0xFF)]
+									break;
+								case 5:
+									delay.delay = payload.data;
+									delays.push(delay);
+									packageNum = 0;
+									break;
+							}
+							packageNum++;
+						} else {
+							resolve(delays);
 						}
-						packageNum++;
 					} else {
-						resolve(delays);
+						reject(payload);
 					}
 				}
 			});
@@ -657,7 +688,9 @@ export class DeviceService {
 			unsubscribe = this.canService.subscribe((can: Can, frame: CanFrame) => {
 				let payload = this.parseFrame(frame);
 				if (payload.packageId == packageId) {
-					if (payload.commCtrl.isAcknowledge) {
+					if (payload.commCtrl.isAcknowledge == true
+						&& !payload.commCtrl.isError == true
+					) {
 						resolve(payload.commCtrl.isAcknowledge);
 					} else {
 						reject(new Error("Delay could not be deleted!"));
