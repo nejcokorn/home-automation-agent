@@ -48,7 +48,7 @@ export class DeviceController {
 		@Param('deviceId') deviceId: number,
 	) {
 		// Get device configuration
-		let deviceConfig = this.device.getConfig({
+		let deviceConfig = await this.device.getConfig({
 			iface,
 			deviceId
 		});
