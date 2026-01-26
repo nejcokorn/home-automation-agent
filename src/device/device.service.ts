@@ -472,7 +472,6 @@ export class DeviceService {
 								&& (payload.config.operation == configOper || actionOper.includes(payload.config.operation) && configOper == ConfigOper.actions)
 							) {
 								if (configOper == ConfigOper.actions) {
-									console.log(payload);
 									// This will indicate last action from device
 									switch (payload.config.operation) {
 										case ConfigOper.actions:
@@ -570,8 +569,6 @@ export class DeviceService {
 
 			unsubscribe = this.canService.subscribe((can: Can, frame: CanFrame) => {
 				let payload = this.parseFrame(frame);
-				console.log(payload);
-				
 				if (payload.packageId == packageId) {
 					if (payload.commCtrl.isAcknowledge == true
 						&& !payload.commCtrl.isError == true
