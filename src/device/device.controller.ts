@@ -18,7 +18,10 @@ export class DeviceController {
 		});
 
 		// Return list of devices this.discovered
-		return devices;
+		return {
+			success: true,
+			data: devices
+		};
 	}
 
 	@Get('can/:iface/device/:deviceId/ping')
@@ -33,7 +36,10 @@ export class DeviceController {
 		});
 
 		// Return list of devices this.discovered
-		return devices;
+		return {
+			success: true,
+			data: devices
+		};
 	}
 
 	@Get('can/:iface/device/:deviceId/config')
@@ -42,13 +48,16 @@ export class DeviceController {
 		@Param('deviceId') deviceId: number,
 	) {
 		// Get device configuration
-		let config = this.device.getConfig({
+		let deviceConfig = this.device.getConfig({
 			iface,
 			deviceId
 		});
 
 		// Return configuration
-		return config;
+		return {
+			success: true,
+			data: deviceConfig
+		};
 	}
 	
 	@Post('can/:iface/device/:deviceId/config')
@@ -79,10 +88,15 @@ export class DeviceController {
 
 		// Get device configuration
 		// Let user know what new configuration is like
-		return await this.device.getConfig({
+		let deviceConfig = await this.device.getConfig({
 			iface,
 			deviceId
 		});
+
+		return {
+			success: true,
+			data: deviceConfig
+		};
 	}
 
 	@Post('can/:iface/device/:deviceId/eeprom')
@@ -94,8 +108,11 @@ export class DeviceController {
 		let EEPROMSize = await this.device.writeEEPROM(iface, deviceId);
 
 		return {
-			size: EEPROMSize
-		}
+			success: true,
+			data: {
+				EEPROMSize: EEPROMSize
+			}
+		};
 	}
 
 	@Get('can/:iface/device/:deviceId/delay')
@@ -107,7 +124,10 @@ export class DeviceController {
 		let delays = await this.device.listDelays(iface, deviceId);
 
 		// Return configuration
-		return delays;
+		return {
+			success: true,
+			data: delays
+		};
 	}
 
 	@Delete('can/:iface/device/:deviceId/delay/:delayId')
@@ -122,7 +142,9 @@ export class DeviceController {
 		// Return configuration
 		return {
 			success: true,
-			delayId: delayId
+			data: {
+				deletedDelayIds: [delayId]
+			}
 		};
 	}
 
@@ -137,7 +159,11 @@ export class DeviceController {
 
 		// Return configuration
 		return {
-			success: true
+			success: true,
+			data: {
+				// TODO list of delited delays
+				deletedDelayIds: []
+			}
 		};
 	}
 
@@ -150,7 +176,7 @@ export class DeviceController {
 		@Param('portId') portId: number,
 	) {
 		// Read from device port
-		let state = await this.device.getPort({
+		let currentState = await this.device.getPort({
 			iface,
 			deviceId,
 			signalType,
@@ -158,7 +184,10 @@ export class DeviceController {
 			portId
 		});
 		return {
-			state: state
+			success: true,
+			data: {
+				currentState: currentState
+			}
 		}
 	}
 
@@ -177,7 +206,7 @@ export class DeviceController {
 		@Body() payload: DeviceCommandDto,
 	) {
 		// Write to device port
-		let state = await this.device.setPort({
+		let currentState = await this.device.setPort({
 			iface,
 			deviceId,
 			signalType,
@@ -189,7 +218,10 @@ export class DeviceController {
 		});
 
 		return {
-			state: state
+			success: true,
+			data: {
+				currentState: currentState
+			}
 		}
 	}
 }
