@@ -82,7 +82,8 @@ export class DeviceService {
 		discover: 100,
 		EEPROM: 1000,
 		listDelays: 1000,
-		clearDelay: 50,
+		clearDelayById: 50,
+		clearDelayByPort: 1000,
 	}
 
 	canAddresses = {
@@ -701,7 +702,7 @@ export class DeviceService {
 				ext: true
 			});
 		})
-		.timeout(this.timeout.clearDelay)
+		.timeout(this.timeout.clearDelayById)
 		.finally(() => {
 			unsubscribe();
 		});
@@ -715,6 +716,7 @@ export class DeviceService {
 			let commCtrl: number = CommCtrl.empty;
 			let dataCtrl: number = DataCtrl.commandBit;
 			let operation: number = CommandOper.clearDelayByPort;
+			let deletedDelayIds: Array<number> = [];
 			
 			let buf: Buffer = Buffer.alloc(8);
 			buf[0] = commCtrl;
@@ -728,9 +730,15 @@ export class DeviceService {
 					if (payload.commCtrl.isAcknowledge == true
 						&& !payload.commCtrl.isError == true
 					) {
-						resolve(payload.commCtrl.isAcknowledge);
+						if (payload.data != 0) {
+							deletedDelayIds.push(payload.data);
+						}
 					} else {
 						reject(new Error("Failed to delete the delay."));
+					}
+					// Respond with list of removed delays
+					if (!payload.commCtrl.isWait) {
+						resolve(deletedDelayIds);
 					}
 				}
 			});
@@ -741,7 +749,7 @@ export class DeviceService {
 				ext: true
 			});
 		})
-		.timeout(this.timeout.clearDelay)
+		.timeout(this.timeout.clearDelayByPort)
 		.finally(() => {
 			unsubscribe();
 		});

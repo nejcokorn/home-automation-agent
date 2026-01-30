@@ -155,14 +155,13 @@ export class DeviceController {
 		@Param('port') port: number,
 	) {
 		// Get device configuration
-		await this.device.clearDelayByPort(iface, deviceId, port);
+		let deletedDelayIds = await this.device.clearDelayByPort(iface, deviceId, port);
 
 		// Return configuration
 		return {
 			success: true,
 			data: {
-				// TODO list of delited delays
-				deletedDelayIds: []
+				deletedDelayIds: deletedDelayIds
 			}
 		};
 	}
