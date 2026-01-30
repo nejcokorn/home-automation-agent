@@ -2,8 +2,17 @@
 NestJS service that manages CAN devices and exposes an HTTP API.  
 Built to run as a systemd service on Ubuntu, with configuration via `/etc/home-automation-agent/config`.
 
-# Install
-TODO
+## Install / Upgrade
+Download the .deb from GitHub Releases, then install/upgrade the service.
+```bash
+curl -fL -o home-automation-agent_1.0.0_arm64.deb \
+  https://github.com/nejcokorn/home-automation-agent/releases/download/v1.0.0/home-automation-agent_1.0.0_arm64.deb
+
+# Install home-automation-agent_1.0.0_arm64.deb
+sudo dpkg -i home-automation-agent_1.0.0_arm64.deb
+sudo systemctl daemon-reload
+sudo systemctl enable --now home-automation-agent
+```
 
 # Build
 Required system packages
