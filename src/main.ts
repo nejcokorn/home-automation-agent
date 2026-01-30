@@ -8,6 +8,6 @@ async function bootstrap() {
 	const app = await NestFactory.create(AppModule);
 	app.useGlobalFilters(new ExceptionHandler());
 	app.enableShutdownHooks();
-	await app.listen(process.env.PORT ?? 3200);
+	await app.listen(process.env.PORT ?? 3588);
 }
 bootstrap();
