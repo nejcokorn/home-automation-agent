@@ -1,0 +1,17 @@
+[Unit]
+Description=Home Automation Agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+EnvironmentFile=-/etc/home-automation-agent/config
+WorkingDirectory=/opt/home-automation-agent/app
+ExecStart=/opt/home-automation-agent/bin/start.sh
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

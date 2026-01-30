@@ -1,0 +1,22 @@
+#!/usr/bin/make -f
+
+export DH_VERBOSE=1
+
+%:
+	dh $@
+
+override_dh_auto_build:
+	# Build is expected to be done before packaging.
+	:
+
+override_dh_auto_install:
+	set -e; \
+	pkgdir=$(CURDIR)/debian/home-automation-agent; \
+	install -d $$pkgdir/opt/home-automation-agent/app $$pkgdir/opt/home-automation-agent/bin $$pkgdir/etc/home-automation-agent; \
+	if [ ! -d "$(CURDIR)/dist" ]; then echo "dist/ missing; run npm run build"; exit 1; fi; \
+	if [ ! -d "$(CURDIR)/node_modules" ]; then echo "node_modules/ missing; install dependencies"; exit 1; fi; \
+	if [ ! -x "$(CURDIR)/node/bin/node" ]; then echo "Bundled Node runtime missing at ./node/bin/node"; exit 1; fi; \
+	cp -a dist node_modules package.json package-lock.json $$pkgdir/opt/home-automation-agent/app/; \
+	cp -a node $$pkgdir/opt/home-automation-agent/; \
+	install -m 0755 debian/start.sh $$pkgdir/opt/home-automation-agent/bin/start.sh; \
+	install -m 0644 debian/home-automation-agent.config $$pkgdir/etc/home-automation-agent/config;

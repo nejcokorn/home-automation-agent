@@ -1,0 +1,13 @@
+Source: home-automation-agent
+Section: misc
+Priority: optional
+Maintainer: Nejc Okorn <nejc.okorn@gmail.com>
+Build-Depends: debhelper-compat (= 13)
+Standards-Version: 4.7.0
+Rules-Requires-Root: no
+
+Package: home-automation-agent
+Architecture: any
+Depends: ${misc:Depends}
+Description: Home automation agent (NestJS)
+ A NestJS-based service that exposes a CAN bus automation API.

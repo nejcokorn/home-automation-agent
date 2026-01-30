@@ -1,0 +1,5 @@
+home-automation-agent (1.0.0) noble; urgency=medium
+
+  * Initial package.
+
+ -- Home Automation <nejc.okorn@gmail.com>  Fri, 30 Jan 2026 12:00:00 +0000
