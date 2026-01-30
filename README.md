@@ -1,4 +1,53 @@
-# API Documentation – home-automation-agent
+# Home Automation Agent
+NestJS service that manages CAN devices and exposes an HTTP API.  
+Built to run as a systemd service on Ubuntu, with configuration via `/etc/home-automation-agent/config`.
+
+# Install
+TODO
+
+# Build
+Required system packages
+```bash
+sudo apt-get update
+sudo apt-get install -y debhelper-compat devscripts build-essential
+```
+
+Build the .deb (downloads Node automatically)
+```bash
+NODE_VERSION=22.22.0 ./scripts/package.sh
+```
+
+Optional: specify architecture explicitly
+```bash
+NODE_VERSION=22.22.0 NODE_ARCH=arm64 ./scripts/package.sh
+```
+
+Cleanup after build artifacts
+```bash
+dpkg-buildpackage -Tclean
+```
+
+# GitHub Release
+Recommended: upload the built `.deb` as a Release asset instead of committing it to the repo.
+
+Quick manual flow
+```bash
+# 1) Build the package
+./scripts/package.sh
+
+# 2) Create a tag (optional but recommended)
+git tag v0.0.1
+git push origin v0.0.1
+```
+
+Then in GitHub:
+- Create a new Release (based on the tag).
+- Upload `home-automation-agent_0.0.1_arm64.deb`.
+- Optionally upload `home-automation-agent-dbgsym_0.0.1_arm64.deb`.
+
+
+
+# API Documentation
 
 This document describes the HTTP API exposed by `home-automation-agent` (NestJS).
 
