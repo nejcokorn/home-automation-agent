@@ -87,7 +87,7 @@ export class DeviceConfigDto {
 	doubleclick: number;
 
 	@IsArray()
-	@ArrayMaxSize(196)
+	@ArrayMaxSize(256)
 	@ValidateNested({ each: true })
 	@Type(() => ActionDto)
 	actions: ActionDto[];
