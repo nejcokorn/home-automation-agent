@@ -17,6 +17,6 @@ export class CanController {
 		@Body() body: Omit<CanFrame, "iface">,
 	) {
 		this.can.send(iface, body);
-		return { ok: true };
+		return { success: true };
 	}
 }
