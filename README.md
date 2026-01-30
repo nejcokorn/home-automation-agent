@@ -36,14 +36,14 @@ Quick manual flow
 ./scripts/package.sh
 
 # 2) Create a tag (optional but recommended)
-git tag v0.0.1
-git push origin v0.0.1
+git tag v1.0.0
+git push origin v1.0.0
 ```
 
 Then in GitHub:
 - Create a new Release (based on the tag).
-- Upload `home-automation-agent_0.0.1_arm64.deb`.
-- Optionally upload `home-automation-agent-dbgsym_0.0.1_arm64.deb`.
+- Upload `home-automation-agent_1.0.0_arm64.deb`.
+- Optionally upload `home-automation-agent-dbgsym_1.0.0_arm64.deb`.
 
 
 
