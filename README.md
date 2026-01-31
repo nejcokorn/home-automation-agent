@@ -14,7 +14,7 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now home-automation-agent
 ```
 
-# Build
+## Build
 Required system packages
 ```bash
 sudo apt-get update
@@ -36,7 +36,7 @@ Cleanup after build artifacts
 dpkg-buildpackage -Tclean
 ```
 
-# GitHub Release
+## GitHub Release
 Recommended: upload the built `.deb` as a Release asset instead of committing it to the repo.
 
 Quick manual flow
@@ -56,17 +56,17 @@ Then in GitHub:
 
 
 
-# API Documentation
+## API Documentation
 
 This document describes the HTTP API exposed by `home-automation-agent` (NestJS).
 
-## Basics
+### Basics
 
 - **Base URL**: `http://<host>:3200`
 - **Content-Type**: `application/json`
 - **Authentication**: not implemented
 
-### Standard response
+#### Standard response
 Most endpoints return an object with `success` and `data` fields.
 
 ```json
@@ -76,7 +76,7 @@ Most endpoints return an object with `success` and `data` fields.
 }
 ```
 
-### Errors
+#### Errors
 The global exception filter returns:
 
 ```json
@@ -91,9 +91,9 @@ The global exception filter returns:
 
 Note: `POST /can/:iface/device/:deviceId/config` currently **returns a raw `Error` object** on failure, not the standardized format.
 
-## CAN
+### CAN
 
-### `GET /can`
+#### `GET /can`
 Returns the list of CAN interfaces opened by the process.
 
 **Response**
@@ -105,7 +105,7 @@ Returns the list of CAN interfaces opened by the process.
 }
 ```
 
-### `POST /can/:iface/tx`
+#### `POST /can/:iface/tx`
 Sends a raw CAN frame to the given interface.
 
 **Params**
@@ -131,10 +131,10 @@ Sends a raw CAN frame to the given interface.
 
 ---
 
-## Devices
+### Devices
 All endpoints below are under `/can/:iface/device/...`.
 
-### `GET /can/:iface/device`
+#### `GET /can/:iface/device`
 Discovers devices on the CAN bus.
 
 **Response**
@@ -142,7 +142,7 @@ Discovers devices on the CAN bus.
 { "success": true, "data": [1, 2, 3] }
 ```
 
-### `GET /can/:iface/device/:deviceId/ping`
+#### `GET /can/:iface/device/:deviceId/ping`
 Pings a single device or broadcasts (depending on `deviceId`).
 
 **Response**
@@ -150,7 +150,7 @@ Pings a single device or broadcasts (depending on `deviceId`).
 { "success": true, "data": [1] }
 ```
 
-### `GET /can/:iface/device/:deviceId/config`
+#### `GET /can/:iface/device/:deviceId/config`
 Reads device configuration.
 
 **Response**
@@ -171,7 +171,7 @@ Reads device configuration.
 }
 ```
 
-### `POST /can/:iface/device/:deviceId/config`
+#### `POST /can/:iface/device/:deviceId/config`
 Sets device configuration. Body is a **list** of `DeviceConfigDto`.
 
 **Body**
@@ -210,7 +210,7 @@ Returns the current device configuration after applying changes.
 
 ---
 
-### `POST /can/:iface/device/:deviceId/eeprom`
+#### `POST /can/:iface/device/:deviceId/eeprom`
 Writes configuration to EEPROM.
 
 **Response**
@@ -221,7 +221,7 @@ Writes configuration to EEPROM.
 }
 ```
 
-### `GET /can/:iface/device/:deviceId/delay`
+#### `GET /can/:iface/device/:deviceId/delay`
 Returns the list of delays on the device.
 
 **Response**
@@ -234,7 +234,7 @@ Returns the list of delays on the device.
 }
 ```
 
-### `DELETE /can/:iface/device/:deviceId/delay/:delayId`
+#### `DELETE /can/:iface/device/:deviceId/delay/:delayId`
 Deletes a delay by ID.
 
 **Response**
@@ -242,7 +242,7 @@ Deletes a delay by ID.
 { "success": true, "data": { "deletedDelayIds": [10] } }
 ```
 
-### `DELETE /can/:iface/device/:deviceId/delay/port/:port`
+#### `DELETE /can/:iface/device/:deviceId/delay/port/:port`
 Deletes delays for a given port.
 
 **Response**
@@ -252,7 +252,7 @@ Deletes delays for a given port.
 
 ---
 
-### `GET /can/:iface/device/:deviceId/:signalType/:direction/:portId`
+#### `GET /can/:iface/device/:deviceId/:signalType/:direction/:portId`
 Reads the current port state.
 
 **Params**
@@ -264,7 +264,7 @@ Reads the current port state.
 { "success": true, "data": { "currentState": 0 } }
 ```
 
-### `POST /can/:iface/device/:deviceId/:signalType/:direction/:portId`
+#### `POST /can/:iface/device/:deviceId/:signalType/:direction/:portId`
 Sets the port state.
 
 **Body**
@@ -283,25 +283,25 @@ Sets the port state.
 
 ---
 
-## Types and constraints
+### Types and constraints
 
-### `ActionTrigger`
+#### `ActionTrigger`
 - `disabled`
 - `rising`
 - `falling`
 
-### `ActionMode`
+#### `ActionMode`
 - `click`
 - `longpress`
 - `doubleclick`
 
-### `ActionType`
+#### `ActionType`
 - `low`
 - `high`
 - `toggle`
 - `pwm`
 
-### `DeviceConfigDto`
+#### `DeviceConfigDto`
 - `inputPortIdx`: int 0–15
 - `debounce`: int 0–16777215 (µs)
 - `doubleclick`: int 0–16777215 (ms)
@@ -310,14 +310,14 @@ Sets the port state.
 - `bypassOnDIPSwitch`: 0 | 1
 - `bypassOnDisconnect`: int 0–16777215 (ms)
 
-### `ActionDto`
+#### `ActionDto`
 - `trigger`: `ActionTrigger` (default: `disabled`)
 - `mode`: `ActionMode` (default: `click`)
 - `type`: `ActionType`
 - `longpress`: int (ms, default 0)
 - `output`: `ActionDtoOutput`
 
-### `ActionDtoOutput`
+#### `ActionDtoOutput`
 - `deviceId`: int 0–255
 - `ports`: int[] (0–11), max 12
 - `skipWhenDelayDeviceId`: int 0–255 | null
@@ -326,12 +326,12 @@ Sets the port state.
 - `clearDelayPorts`: int[] (0–11), max 12
 - `delay`: int (ms, default 0)
 
-### `DeviceCommandDto`
+#### `DeviceCommandDto`
 - `type`: `ActionType`
 - `delay`: int 0–4294967295 (optional, default 0)
 - `extra`: int 0–4294967295 (optional)
 
 ---
 
-## Notes on timeouts
+### Notes on timeouts
 Some CAN commands have strict timeouts (e.g. `ping`, `config`, `listDelays`). On timeout the API returns `TimeoutError`.
