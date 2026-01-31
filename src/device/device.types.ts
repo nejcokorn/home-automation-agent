@@ -52,8 +52,8 @@ export enum ConfigOper {
 	actionClearDelays   = 0x07, // Action P4 clear all delays on all specified output ports (map)
 	actionDelay         = 0x08, // Action P5 delay in milliseconds
 	actionLongpress     = 0x09, // Action P6 longpress in milliseconds
-	bypassInstantly     = 0x0A, // Bypass Instantly
-	bypassOnDIPSwitch   = 0x0B, // Bypass determined by DIP switch
+	actionConfigSwitch  = 0x0A, // Action P7 Config switch
+	bypassInstantly     = 0x0B, // Bypass Instantly
 	bypassOnDisconnect  = 0x0C, // Bypass on disconnect in milliseconds
 
 	writeEEPROM         = 0x7F, // Write all configuration into EEPROM

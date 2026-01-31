@@ -62,6 +62,11 @@ export class ActionDto {
 	@IsOptional()
 	longpress: number = 0;
 
+	@Min(0)
+	@Max(4)
+	@IsOptional()
+	configSwitch: number = 0;
+
 	@Type(() => ActionDtoOutput)
 	@ValidateNested({ each: true })
 	output: ActionDtoOutput;
@@ -97,12 +102,6 @@ export class DeviceConfigDto {
 	@Min(0)
 	@Max(1)
 	bypassInstantly: number;
-
-	// Bypass flag
-	@IsInt()
-	@Min(0)
-	@Max(1)
-	bypassOnDIPSwitch: number;
 
 	// Number in milliseconds
 	@IsInt()

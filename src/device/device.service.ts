@@ -14,7 +14,6 @@ const generalOper = [
 	ConfigOper.doubleclick,
 	ConfigOper.actions,
 	ConfigOper.bypassInstantly,
-	ConfigOper.bypassOnDIPSwitch,
 	ConfigOper.bypassOnDisconnect,
 ]
 
@@ -26,6 +25,7 @@ const actionOper = [
 	ConfigOper.actionClearDelays,
 	ConfigOper.actionDelay,
 	ConfigOper.actionLongpress,
+	ConfigOper.actionConfigSwitch,
 ]
 
 const numToActionTrigger = {
@@ -374,6 +374,14 @@ export class DeviceService {
 								configOper: ConfigOper[ConfigOper.actionLongpress],
 								data: action.longpress
 							});
+
+							// P7 - action configSwitch
+							await this.sendConfig({
+								...options,
+								inputPortIdx: inputConfig.inputPortIdx,
+								configOper: ConfigOper[ConfigOper.actionConfigSwitch],
+								data: action.configSwitch
+							});
 						}
 					} else if (Object.values(ConfigOper).filter(v => typeof v === "string").includes(configOper)){
 						await this.sendConfig({
@@ -498,6 +506,9 @@ export class DeviceService {
 										case ConfigOper.actionLongpress:
 											lastAction.longpress = payload.data;
 											break;
+										case ConfigOper.actionConfigSwitch:
+											lastAction.configSwitch = payload.data;
+											break;
 										case ConfigOper.actionBase:
 											let trigger: ActionTrigger = numToActionTrigger[(payload.data >> 16) & 0xFF];
 											let mode: ActionMode = numToActionMode[(payload.data >> 8) & 0xFF];
@@ -509,6 +520,7 @@ export class DeviceService {
 												mode,
 												type,
 												longpress: 0,
+												configSwitch: 0,
 												output: {
 													skipWhenDelayDeviceId: 0xFF,
 													skipWhenDelayPorts: [],
