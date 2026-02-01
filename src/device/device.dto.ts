@@ -77,7 +77,7 @@ export class DeviceConfigDto {
 	@IsInt()
 	@Min(0)
 	@Max(15)
-	inputPortIdx: number;
+	inputPort: number;
 
 	// Number in microseconds
 	@IsInt()

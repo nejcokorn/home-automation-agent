@@ -316,7 +316,7 @@ export class DeviceService {
 						// Remove all actions before inserting new set of actions
 						await this.sendConfig({
 							...options,
-							inputPortIdx: inputConfig.inputPortIdx,
+							inputPort: inputConfig.inputPort,
 							configOper: ConfigOper[ConfigOper.actions], 
 							data: 0
 						});
@@ -330,7 +330,7 @@ export class DeviceService {
 							// P1 - action base
 							await this.sendConfig({
 								...options,
-								inputPortIdx: inputConfig.inputPortIdx,
+								inputPort: inputConfig.inputPort,
 								configOper: ConfigOper[ConfigOper.actionBase],
 								data: trigger << 16 | mode << 8 | type
 							});
@@ -338,7 +338,7 @@ export class DeviceService {
 							// P2 - action ports
 							await this.sendConfig({
 								...options,
-								inputPortIdx: inputConfig.inputPortIdx,
+								inputPort: inputConfig.inputPort,
 								configOper: ConfigOper[ConfigOper.actionPorts],
 								data: (action.output.deviceId ? action.output.deviceId : 0xFF) << 24 | this.portsToHex(action.output.ports)
 							});
@@ -346,7 +346,7 @@ export class DeviceService {
 							// P3 - action ports
 							await this.sendConfig({
 								...options,
-								inputPortIdx: inputConfig.inputPortIdx,
+								inputPort: inputConfig.inputPort,
 								configOper: ConfigOper[ConfigOper.actionSkipWhenDelay],
 								data: (action.output.skipWhenDelayDeviceId ? action.output.skipWhenDelayDeviceId : 0xFF) << 24 | this.portsToHex(action.output.skipWhenDelayPorts)
 							});
@@ -354,7 +354,7 @@ export class DeviceService {
 							// P4 - action ports
 							await this.sendConfig({
 								...options,
-								inputPortIdx: inputConfig.inputPortIdx,
+								inputPort: inputConfig.inputPort,
 								configOper: ConfigOper[ConfigOper.actionClearDelays],
 								data: (action.output.clearDelayDeviceId ? action.output.clearDelayDeviceId : 0xFF) << 24 | this.portsToHex(action.output.clearDelayPorts)
 							});
@@ -362,7 +362,7 @@ export class DeviceService {
 							// P5 - action delay
 							await this.sendConfig({
 								...options,
-								inputPortIdx: inputConfig.inputPortIdx,
+								inputPort: inputConfig.inputPort,
 								configOper: ConfigOper[ConfigOper.actionDelay],
 								data: action.output.delay
 							});
@@ -370,7 +370,7 @@ export class DeviceService {
 							// P6 - action longpress
 							await this.sendConfig({
 								...options,
-								inputPortIdx: inputConfig.inputPortIdx,
+								inputPort: inputConfig.inputPort,
 								configOper: ConfigOper[ConfigOper.actionLongpress],
 								data: action.longpress
 							});
@@ -378,7 +378,7 @@ export class DeviceService {
 							// P7 - action configSwitch
 							await this.sendConfig({
 								...options,
-								inputPortIdx: inputConfig.inputPortIdx,
+								inputPort: inputConfig.inputPort,
 								configOper: ConfigOper[ConfigOper.actionConfigSwitch],
 								data: action.configSwitch
 							});
@@ -386,7 +386,7 @@ export class DeviceService {
 					} else if (Object.values(ConfigOper).filter(v => typeof v === "string").includes(configOper)){
 						await this.sendConfig({
 							...options,
-							inputPortIdx: inputConfig.inputPortIdx,
+							inputPort: inputConfig.inputPort,
 							configOper,
 							data: value
 						});
@@ -399,7 +399,7 @@ export class DeviceService {
 		.catch((error) => error);
 	}
 
-	private async sendConfig(options: { iface: string, deviceId: number, inputPortIdx: number, configOper: string, data: number }) {
+	private async sendConfig(options: { iface: string, deviceId: number, inputPort: number, configOper: string, data: number }) {
 		let unsubscribe: Unsubscribe = () => {};
 		await new ExtraPromise((resolve, reject) => {
 			let packageId: number = this.nextPackageId(this.canAddresses.setConfig, options.deviceId);
@@ -412,7 +412,7 @@ export class DeviceService {
 			buf[0] = commCtrl;
 			buf[1] = dataCtrl;
 			buf[2] = operation;
-			buf[3] = options.inputPortIdx;
+			buf[3] = options.inputPort;
 			Buffer.from([options.data >> 24, options.data >> 16, options.data >> 8, options.data]).copy(buf, 4);
 
 			// Subscribe for ACK
@@ -448,9 +448,9 @@ export class DeviceService {
 		// Initialize configuration object
 		let deviceConfig: any = [];
 		
-		for (let inputPortIdx = 0; inputPortIdx < 16; inputPortIdx++) {
+		for (let inputPort = 0; inputPort < 16; inputPort++) {
 			let inputConfig = {
-				inputPortIdx
+				inputPort
 			};
 			for (let configOper of generalOper) {
 				let unsubscribe: Unsubscribe = () => {};
@@ -465,7 +465,7 @@ export class DeviceService {
 					buf[0] = commCtrl;
 					buf[1] = dataCtrl;
 					buf[2] = operation;
-					buf[3] = inputPortIdx;
+					buf[3] = inputPort;
 
 					// Config data retrived from device
 					let actionData: ActionDto[] = [];
