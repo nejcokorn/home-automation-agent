@@ -345,3 +345,60 @@ Sets the port state.
 
 ### Notes on timeouts
 Some CAN commands have strict timeouts (e.g. `ping`, `config`, `listDelays`). On timeout the API returns `TimeoutError`.
+
+
+## MQTT Topics
+The agent both publishes and subscribes to MQTT. All payloads are JSON.
+
+### Status
+**Topic**: `agent/status` (retained)
+
+**Published values**
+- `online` on successful connect
+- `offline` via LWT (Last Will) when the agent disconnects
+
+### CAN TX via MQTT
+Send a raw CAN frame by publishing to:
+
+**Topic**: `can/<iface>/tx`
+
+**Payload**
+```json
+{
+  "id": 123,
+  "data": [0, 1, 2, 3, 4, 5, 6, 7],
+  "ext": true,
+  "rtr": false
+}
+```
+
+**Notes**
+- `<iface>` must match an opened CAN interface (e.g. `can0`).
+- `data` is passed directly to `socketcan` (prefer a byte array of 0–255).
+
+### Device input/output broadcasts
+Whenever a CAN device broadcasts an input or output change, the agent publishes the parsed frame.
+
+**Topics**
+- `can/<iface>/device/<deviceId>/input/<port>`
+- `can/<iface>/device/<deviceId>/output/<port>`
+
+**Payload (example)**
+```json
+{
+  "packageId": 1,
+  "commandId": 0,
+  "initiatorId": 2,
+  "responderId": 255,
+  "commCtrl": { "isDiscovery": false, "isPing": false, "isAcknowledge": false, "isWait": false, "isError": false },
+  "dataCtrl": { "isCommand": false, "isConfig": false, "isAnalog": false, "isDigital": true, "isInput": true, "isOutput": false, "dataType": 0 },
+  "command": { "operation": 0 },
+  "config": { "isGet": false, "isSet": false, "operation": 0 },
+  "port": 3,
+  "data": 1
+}
+```
+
+**Notes**
+- `<deviceId>` is the originating CAN device ID (`initiatorId`).
+- Broadcast-only: frames are published when `responderId` equals the CAN broadcast address.
