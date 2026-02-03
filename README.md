@@ -2,6 +2,16 @@
 NestJS service that manages CAN devices and exposes an HTTP API.  
 Built to run as a systemd service on Ubuntu, with configuration via `/etc/home-automation-agent/config`.
 
+## Configuration
+The systemd service loads environment variables from `/etc/home-automation-agent/config`.
+
+MQTT connection settings:
+- `MQTT_URL` (default: `mqtt://localhost:1883`)
+- `MQTT_HOST` / `MQTT_PORT` (used only if `MQTT_URL` is not set)
+- `MQTT_USERNAME`
+- `MQTT_PASSWORD`
+- `MQTT_QOS` (default: `0`)
+
 ## Install / Upgrade
 Download the .deb from GitHub Releases, then install/upgrade the service.
 ```bash

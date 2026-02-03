@@ -12,7 +12,9 @@ export class MqttService implements OnModuleInit, OnModuleDestroy {
 	) {}
 
 	onModuleInit() {
-		const url = "mqtt://localhost:1883";
+		const url =
+			process.env.MQTT_URL ??
+			`mqtt://${process.env.MQTT_HOST ?? "localhost"}:${process.env.MQTT_PORT ?? "1883"}`;
 		const opts: IClientOptions = {
 			clientId: `can-agent-${Math.random().toString(16).slice(2)}`,
 			username: process.env.MQTT_USERNAME || undefined,
