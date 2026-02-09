@@ -15,11 +15,11 @@ MQTT connection settings:
 ## Install / Upgrade
 Download the .deb from GitHub Releases, then install/upgrade the service.
 ```bash
-curl -fL -o home-automation-agent_1.1.0_arm64.deb \
-  https://github.com/nejcokorn/home-automation-agent/releases/download/v1.1.0/home-automation-agent_1.1.0_arm64.deb
+curl -fL -o home-automation-agent_1.2.0_arm64.deb \
+  https://github.com/nejcokorn/home-automation-agent/releases/download/v1.2.0/home-automation-agent_1.2.0_arm64.deb
 
-# Install home-automation-agent_1.1.0_arm64.deb
-sudo dpkg -i home-automation-agent_1.1.0_arm64.deb
+# Install home-automation-agent_1.2.0_arm64.deb
+sudo dpkg -i home-automation-agent_1.2.0_arm64.deb
 sudo systemctl daemon-reload
 sudo systemctl enable --now home-automation-agent
 ```
@@ -55,14 +55,14 @@ Quick manual flow
 ./scripts/package.sh
 
 # 2) Create a tag (optional but recommended)
-git tag v1.1.0
-git push origin v1.1.0
+git tag v1.2.0
+git push origin v1.2.0
 ```
 
 Then in GitHub:
 - Create a new Release (based on the tag).
-- Upload `home-automation-agent_1.1.0_arm64.deb`.
-- Optionally upload `home-automation-agent-dbgsym_1.1.0_arm64.deb`.
+- Upload `home-automation-agent_1.2.0_arm64.deb`.
+- Optionally upload `home-automation-agent-dbgsym_1.2.0_arm64.deb`.
 
 
 
