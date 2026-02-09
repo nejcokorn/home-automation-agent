@@ -72,7 +72,7 @@ This document describes the HTTP API exposed by `home-automation-agent` (NestJS)
 
 ### Basics
 
-- **Base URL**: `http://<host>:3200`
+- **Base URL**: `http://<host>:3588`
 - **Content-Type**: `application/json`
 - **Authentication**: not implemented
 
